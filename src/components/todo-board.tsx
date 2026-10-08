@@ -68,12 +68,12 @@ export function TodoBoard({ initial, today }: { initial: Todo[]; today: string }
     <>
       <form
         onSubmit={add}
-        className="mb-8 rounded-lg border border-line bg-surface focus-within:border-line-strong"
+        className="mb-5 rounded-[var(--radius-panel)] border border-white/[0.05] bg-surface focus-within:border-accent/40"
       >
         <label htmlFor={inputId} className="sr-only">
           Neues Todo
         </label>
-        <div className="flex items-center gap-3 px-4">
+        <div className="flex items-center gap-3 px-5">
           <Plus size={16} className="shrink-0 text-faint" aria-hidden />
           <input
             id={inputId}
@@ -83,12 +83,12 @@ export function TodoBoard({ initial, today }: { initial: Todo[]; today: string }
             className="min-w-0 flex-1 bg-transparent py-3.5 text-[15px] text-ink placeholder:text-faint focus:outline-none"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2.5">
           <select
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             aria-label="Zuordnung"
-            className="rounded-md bg-raised px-2.5 py-1.5 text-[13px] text-muted focus:text-ink"
+            className="rounded-lg bg-raised px-2.5 py-1.5 text-[13px] text-muted focus:text-ink"
           >
             <option value="">Privat</option>
             <option value="schule">Schule allgemein</option>
@@ -104,26 +104,26 @@ export function TodoBoard({ initial, today }: { initial: Todo[]; today: string }
             value={due}
             onChange={(e) => setDue(e.target.value)}
             aria-label="Fällig am"
-            className="rounded-md bg-raised px-2.5 py-1.5 text-[13px] text-muted [color-scheme:dark] focus:text-ink"
+            className="rounded-lg bg-raised px-2.5 py-1.5 text-[13px] text-muted [color-scheme:dark] focus:text-ink"
           />
           <button
             type="submit"
             disabled={!title.trim()}
-            className="ml-auto rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-accent-ink transition-opacity disabled:opacity-40"
+            className="ml-auto rounded-lg bg-accent px-4 py-1.5 text-[13px] font-medium text-accent-ink transition-opacity disabled:opacity-40"
           >
             Hinzufügen
           </button>
         </div>
       </form>
 
-      <div role="tablist" aria-label="Filter" className="mb-8 inline-flex rounded-lg bg-surface p-1">
+      <div role="tablist" aria-label="Filter" className="mb-5 inline-flex rounded-xl border border-white/[0.05] bg-surface p-1">
         {filters.map((f) => (
           <button
             key={f.value}
             role="tab"
             aria-selected={filter === f.value}
             onClick={() => setFilter(f.value)}
-            className={`rounded-md px-3.5 py-1.5 text-[13px] transition-colors ${
+            className={`rounded-lg px-3.5 py-1.5 text-[13px] transition-colors ${
               filter === f.value ? "bg-raised text-ink" : "text-muted hover:text-ink"
             }`}
           >
@@ -132,7 +132,7 @@ export function TodoBoard({ initial, today }: { initial: Todo[]; today: string }
         ))}
       </div>
 
-      <div className="flex flex-col gap-10">
+      <div className="flex flex-col gap-8 rounded-[var(--radius-panel)] border border-white/[0.05] bg-surface p-5 sm:p-6">
         {groups.length === 0 ? (
           <p className="text-muted">Keine offenen Todos. Neue oben eintragen.</p>
         ) : (

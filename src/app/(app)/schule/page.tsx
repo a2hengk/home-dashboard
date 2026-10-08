@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { connection } from "next/server";
+import { requireUser } from "@/lib/session";
 import { diffDays, todayISO } from "@/lib/dates";
 import {
   average,
@@ -25,7 +25,8 @@ export default function SchulePage() {
 }
 
 async function Schule() {
-  await connection();
+  // Auth-Prüfung hier und nicht nur im Layout: Seite und Layout rendern parallel
+  await requireUser();
   const today = todayISO();
   const todos = getTodos(today);
   const events = getEvents(today);
@@ -53,8 +54,9 @@ async function Schule() {
         {total !== null ? ` Schnitt über alle Noten ${formatGrade(total)}.` : null}
       </PageHeader>
 
+      <div className="rounded-[var(--radius-panel)] border border-white/[0.05] bg-surface px-5 py-2 sm:px-6">
       <div
-        className="hidden grid-cols-[1fr_6rem_8rem_6rem_4rem] gap-4 border-b border-line pb-2 pl-5 text-[12px] text-faint md:grid"
+        className="hidden grid-cols-[1fr_6rem_8rem_6rem_4rem] gap-4 border-b border-line pb-3 pl-5 pt-3 text-[12px] text-faint md:grid"
         aria-hidden
       >
         <span>Fach</span>
@@ -66,7 +68,7 @@ async function Schule() {
 
       <ul>
         {rows.map((r) => (
-          <li key={r.kuerzel} className="border-b border-line">
+          <li key={r.kuerzel} className="border-b border-line last:border-b-0">
             <Link
               href={`/schule/${r.kuerzel.toLowerCase()}`}
               className="group relative grid gap-1 py-4 pl-5 md:grid-cols-[1fr_6rem_8rem_6rem_4rem] md:items-center md:gap-4"
@@ -91,7 +93,7 @@ async function Schule() {
               {/* Handy: eine Meta-Zeile statt Spalten */}
               <span className="flex flex-wrap gap-x-4 text-[13px] text-faint md:hidden">
                 {r.open ? <span>{r.open} offen</span> : null}
-                {r.exam !== null ? <span className="text-accent">Prüfung in {r.exam} Tagen</span> : null}
+                {r.exam !== null ? <span className="text-exam">Prüfung in {r.exam} Tagen</span> : null}
                 <span>{r.docs} Dokumente</span>
                 {r.avg !== null ? <span>Schnitt {formatGrade(r.avg)}</span> : null}
               </span>
@@ -101,7 +103,7 @@ async function Schule() {
               </span>
               <span className="hidden text-right text-[14px] md:block">
                 {r.exam !== null ? (
-                  <span className="text-accent">in {r.exam} Tagen</span>
+                  <span className="text-exam">in {r.exam} Tagen</span>
                 ) : (
                   <span className="text-faint">–</span>
                 )}
@@ -114,6 +116,7 @@ async function Schule() {
           </li>
         ))}
       </ul>
+      </div>
     </>
   );
 }

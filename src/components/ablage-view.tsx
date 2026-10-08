@@ -94,7 +94,7 @@ export function AblageView({
   const rowProps = { today, folders, onMove: moveDoc };
 
   const searchBar = (
-    <div className="mb-10 flex items-center gap-3 rounded-lg border border-line bg-surface px-4 focus-within:border-line-strong">
+    <div className="mb-8 flex items-center gap-3 rounded-[var(--radius-panel)] border border-white/[0.05] bg-surface px-5 focus-within:border-accent/40">
       <Search size={16} className="shrink-0 text-faint" aria-hidden />
       <label htmlFor={searchId} className="sr-only">
         Dokumente durchsuchen
@@ -139,8 +139,9 @@ export function AblageView({
         {searchBar}
         <DropZone onFiles={(f) => addFiles(f, open.id)} hint={`Landen direkt in ${open.name}`} />
 
+        <div className="rounded-[var(--radius-panel)] border border-white/[0.05] bg-surface p-5 sm:p-6">
         {inside.length === 0 ? (
-          <p className="py-4 text-muted">
+          <p className="py-2 text-muted">
             Noch leer. Dateien oben reinziehen oder in der Übersicht über die Spalte Ordner hierher verschieben.
           </p>
         ) : (
@@ -150,6 +151,7 @@ export function AblageView({
             ))}
           </DocTable>
         )}
+        </div>
         <Toast message={toast} />
       </>
     );
@@ -195,7 +197,7 @@ export function AblageView({
         </div>
       </section>
 
-      <section aria-labelledby="alle">
+      <section aria-labelledby="alle" className="rounded-[var(--radius-panel)] border border-white/[0.05] bg-surface p-5 sm:p-6">
         <SectionTitle count={docs.length}>
           <span id="alle">Alle Dokumente</span>
         </SectionTitle>
@@ -348,7 +350,7 @@ function DropZone({ onFiles, hint }: { onFiles: (files: FileList) => void; hint:
         setDragging(false);
         if (e.dataTransfer.files.length) onFiles(e.dataTransfer.files);
       }}
-      className={`mb-8 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-dashed px-5 py-4 transition-colors ${
+      className={`mb-6 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-dashed px-5 py-4 transition-colors ${
         dragging ? "border-accent bg-accent/5" : "border-line-strong"
       }`}
     >

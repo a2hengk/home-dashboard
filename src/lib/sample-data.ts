@@ -27,6 +27,7 @@ export type EventItem = {
   date: string;
   time?: string;
   subject?: string;
+  important?: boolean; // wird farbig hervorgehoben
 };
 
 export type Folder = {
@@ -135,8 +136,8 @@ export function getEvents(today: string): EventItem[] {
   const due = (subject: string, minDays: number) => ({ date: nextLesson(today, subject, minDays).date });
   return [
     { id: "e1", title: "Abgabe Arbeitsplatz-Konzept", type: "abgabe", subject: "LF2", ...due("LF2", 1) },
-    { id: "e2", title: "Auto zum TÜV", type: "privat", date: addDays(today, 4), time: "16:30" },
-    { id: "e3", title: "Klassenarbeit SQL und ER-Modell", type: "pruefung", subject: "LF5", ...exam("LF5", 5) },
+    { id: "e2", title: "Auto zum TÜV", type: "privat", important: true, date: addDays(today, 4), time: "16:30" },
+    { id: "e3", title: "Klassenarbeit SQL und ER-Modell", type: "pruefung", important: true, subject: "LF5", ...exam("LF5", 5) },
     { id: "e6", title: "Abgabe Schutzbedarfsanalyse", type: "abgabe", subject: "LF4", ...due("LF4", 6) },
     { id: "e4", title: "Test Subnetting", type: "pruefung", subject: "LF3", ...exam("LF3", 12) },
     { id: "e5", title: "Vokabeltest Unit 2", type: "pruefung", subject: "EN", ...exam("EN", 19) },

@@ -8,7 +8,7 @@ export function PageHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <header className="mb-10">
+    <header className="mb-8">
       <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-ink">{title}</h1>
       {children ? <p className="mt-2 max-w-prose text-muted">{children}</p> : null}
     </header>
@@ -65,5 +65,43 @@ export function PageSkeleton() {
       <div className="mt-4 h-4 w-80 max-w-full rounded bg-surface" />
       <div className="mt-12 h-24 rounded-md bg-surface" />
     </div>
+  );
+}
+
+/**
+ * Fläche für ein Modul. Große Rundung außen, Listen innen bleiben flach.
+ * Titel optional, mit Zähler und Aktion rechts.
+ */
+export function Panel({
+  title,
+  count,
+  action,
+  children,
+  className = "",
+  id,
+}: {
+  title?: React.ReactNode;
+  count?: number;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+  id?: string;
+}) {
+  return (
+    <section
+      aria-labelledby={title && id ? id : undefined}
+      className={`rounded-[var(--radius-panel)] border border-white/[0.05] bg-surface p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:p-6 ${className}`}
+    >
+      {title ? (
+        <div className="mb-4 flex items-baseline justify-between gap-4">
+          <h2 id={id} className="text-[15px] font-semibold text-ink">
+            {title}
+            {count !== undefined ? <span className="ml-2 font-normal text-faint">{count}</span> : null}
+          </h2>
+          {action}
+        </div>
+      ) : null}
+      {children}
+    </section>
   );
 }

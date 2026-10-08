@@ -43,6 +43,7 @@ export const events = pgTable("events", {
   startAt: timestamp("start_at", { withTimezone: true }).notNull(),
   endAt: timestamp("end_at", { withTimezone: true }),
   location: text("location"),
+  important: boolean("important").notNull().default(false), // farbig hervorheben
   subjectId: uuid("subject_id").references(() => subjects.id, { onDelete: "set null" }),
 });
 
@@ -116,3 +117,6 @@ export const grades = pgTable("grades", {
   date: date("date").notNull(),
   subjectId: uuid("subject_id").notNull().references(() => subjects.id, { onDelete: "cascade" }),
 });
+
+// Login-Tabellen von Better Auth (generiert mit `npx @better-auth/cli generate`)
+export * from "./auth-schema";

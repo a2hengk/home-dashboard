@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { connection } from "next/server";
+import { requireUser } from "@/lib/session";
 import { todayISO } from "@/lib/dates";
 import { folders, getDocs } from "@/lib/sample-data";
 import { AblageView } from "@/components/ablage-view";
@@ -17,7 +17,8 @@ export default function AblagePage() {
 }
 
 async function Ablage() {
-  await connection();
+  // Auth-Prüfung hier und nicht nur im Layout: Seite und Layout rendern parallel
+  await requireUser();
   const today = todayISO();
 
   return (

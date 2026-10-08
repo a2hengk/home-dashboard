@@ -1,15 +1,23 @@
 @import "tailwindcss";
 
 /*
-  Farben: dunkles Blau-Grau als Grund, ein ruhiges kühles Blau als einziger Akzent.
-  Lernfeld-Farben sind bewusst gedämpft, damit sie neben dem Akzent nicht schreien.
+  Farben: dunkles Blau-Grau als Grund, darauf etwas hellere Panels.
+  Kühles Blau ist der Akzent für "heute" und Aktionen.
+  Termine haben eigene Farben: Prüfung koralle, Abgabe bernstein, privat blau.
+  Lernfeld-Farben sind bewusst gedämpft, damit sie neben beidem nicht schreien.
 */
 @theme {
-  --color-base: #131920;
-  --color-surface: #19202a;
-  --color-raised: #202935;
-  --color-line: #29323f;
-  --color-line-strong: #36414f;
+  --color-base: #0f141a;
+  --color-surface: #161d26;
+  --color-raised: #1e2631;
+  --color-line: #252e3a;
+  --color-line-strong: #333d4a;
+
+  --color-exam: #ef8f86;
+  --color-deadline: #e3b45f;
+  --color-private: #7ea9de;
+
+  --radius-panel: 1.125rem;
 
   --color-ink: #e4e9f0;
   --color-muted: #94a0b1;

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { connection } from "next/server";
+import { requireUser } from "@/lib/session";
 import { todayISO } from "@/lib/dates";
 import { getTodos } from "@/lib/sample-data";
 import { TodoBoard } from "@/components/todo-board";
@@ -17,7 +17,8 @@ export default function TodosPage() {
 }
 
 async function Todos() {
-  await connection();
+  // Auth-Prüfung hier und nicht nur im Layout: Seite und Layout rendern parallel
+  await requireUser();
   const today = todayISO();
   const todos = getTodos(today);
   const open = todos.filter((t) => !t.done).length;

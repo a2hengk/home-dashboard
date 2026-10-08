@@ -164,8 +164,8 @@ export function AblageView({
       <header className="mb-10">
         <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-ink">Ablage</h1>
         <p className="mt-2 text-muted">
-          {plural(docs.length)} in {folders.length} Ordnern, zusammen {formatSize(total)}. Nur für dich
-          sichtbar.
+          {plural(docs.length)} in {folders.length} Ordnern, zusammen {formatSize(total)}. Noch
+          Beispieldaten, Uploads werden nicht gespeichert.
         </p>
       </header>
 

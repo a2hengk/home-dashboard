@@ -6,6 +6,16 @@ Persönliches Dashboard für Alltag und Berufsschule: Todos, Termine mit Mail-Re
 
 Next.js (App Router) · TypeScript · Tailwind · Drizzle ORM · Postgres (Neon) · Cloudflare R2 · Resend · Vercel
 
+## Stand
+
+Probe-UI mit Beispieldaten aus `src/lib/sample-data.ts`, noch ohne Datenbank und Login:
+
+- `/` Heute: Datum, die nächsten 14 Tage mit Schultagen, Prüfungen und Abgaben, fällige Todos, Stundenplan
+- `/todos` Schnellerfassung, Filter Schule/Privat, Gruppen nach Fälligkeit
+- `/schule` alle Fächer mit offenen Todos, nächster Prüfung, Dokumenten, Schnitt
+- `/schule/[kuerzel]` ein Lernfeld mit Dokumenten, Todos, Terminen und Noten
+- `/ablage` Suche, Filter nach Fach, Upload-Feld (Dateien bleiben vorerst nur lokal in der Liste)
+
 ## Setup
 
 ```bash

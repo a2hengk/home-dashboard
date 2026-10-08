@@ -1,7 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth, isAllowed } from "./auth";
+import { authConfigured, getAuth, isAllowed } from "./auth";
 
 /** Nur lokal mit `next dev`: Login überspringen. In Production wirkungslos. */
 export const devSkipAuth = () =>
@@ -15,9 +15,12 @@ export const devSkipAuth = () =>
 export async function requireUser() {
   if (devSkipAuth()) return { id: "dev", name: "Dev", githubLogin: "dev" };
 
+  // Ohne fertige Einrichtung kann niemand eingeloggt sein. Login-Seite zeigt, was fehlt.
+  if (!authConfigured()) redirect("/login");
+
   let session = null;
   try {
-    session = await auth.api.getSession({ headers: await headers() });
+    session = await getAuth().api.getSession({ headers: await headers() });
   } catch {
     // z.b. Datenbank noch nicht verbunden: behandeln wie ausgeloggt
   }

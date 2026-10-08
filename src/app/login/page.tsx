@@ -2,20 +2,12 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth, isAllowed } from "@/lib/auth";
+import { getAuth, isAllowed, missingAuthEnv } from "@/lib/auth";
 import { AppMark } from "@/components/nav";
 import { SignInButton } from "./sign-in-button";
 
 export const metadata: Metadata = { title: "Anmelden" };
 
-// Was für den Login gesetzt sein muss. Angezeigt werden nur die Namen, nie Werte.
-const required = [
-  "DATABASE_URL",
-  "BETTER_AUTH_SECRET",
-  "GITHUB_CLIENT_ID",
-  "GITHUB_CLIENT_SECRET",
-  "ALLOWED_GITHUB_LOGINS",
-] as const;
 
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
@@ -32,12 +24,13 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
 async function LoginCard({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
   const { error } = await searchParams;
 
-  // Schon eingeloggt? Dann direkt weiter
-  if (!error) {
-    const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
+  const missing = missingAuthEnv();
+
+  // Schon eingeloggt? Dann direkt weiter (nur wenn alles eingerichtet ist)
+  if (!error && missing.length === 0) {
+    const session = await getAuth().api.getSession({ headers: await headers() }).catch(() => null);
     if (session && isAllowed((session.user as { githubLogin?: string }).githubLogin)) redirect("/");
   }
-  const missing = required.filter((k) => !process.env[k]);
 
   return (
     <div className="rounded-[var(--radius-panel)] border border-white/[0.05] bg-surface p-7">

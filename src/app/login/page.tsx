@@ -51,7 +51,7 @@ async function LoginCard({ searchParams }: { searchParams: PageProps<"/login">["
 
       {missing.length ? (
         <div className="mt-6 border-t border-line pt-5 text-[13px]">
-          <p className="text-muted">Login ist noch nicht fertig eingerichtet. In Vercel fehlt:</p>
+          <p className="text-muted">Login ist noch nicht fertig eingerichtet. In Vercel fehlt (oder steht nur der Name als Wert drin):</p>
           <ul className="mt-2 space-y-1">
             {missing.map((k) => (
               <li key={k} className="flex items-center gap-2 text-faint">

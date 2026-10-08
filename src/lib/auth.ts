@@ -28,8 +28,12 @@ export const REQUIRED_AUTH_ENV = [
   "ALLOWED_GITHUB_LOGINS",
 ] as const;
 
+/** Leer oder versehentlich der Name selbst als Wert (z.b. GITHUB_CLIENT_ID=GITHUB_CLIENT_ID) */
 export const missingAuthEnv = () =>
-  REQUIRED_AUTH_ENV.filter((k) => !process.env[k]);
+  REQUIRED_AUTH_ENV.filter((k) => {
+    const v = process.env[k]?.trim();
+    return !v || v === k;
+  });
 
 /**
  * Better Auth wirft in Production einen Fehler, wenn der Secret fehlt, und zwar als

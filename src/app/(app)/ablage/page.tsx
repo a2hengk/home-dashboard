@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { requireUser } from "@/lib/session";
 import { todayISO } from "@/lib/dates";
-import { folders, getDocs } from "@/lib/sample-data";
+import { getDocs, getFolders, getSubjects } from "@/lib/data";
+import { requireUser } from "@/lib/session";
+import { formatSize } from "@/lib/types";
 import { AblageView } from "@/components/ablage-view";
-import { PageSkeleton } from "@/components/ui";
+import { PageSkeleton, PageTitle } from "@/components/hud";
 
 export const metadata: Metadata = { title: "Ablage" };
 
@@ -20,10 +21,21 @@ async function Ablage() {
   // Auth-Prüfung hier und nicht nur im Layout: Seite und Layout rendern parallel
   await requireUser();
   const today = todayISO();
+  const [docs, folders, subjects] = await Promise.all([getDocs(), getFolders(), getSubjects()]);
+  const total = docs.reduce((s, d) => s + d.sizeBytes, 0);
+  const storage = !!process.env.BLOB_READ_WRITE_TOKEN;
 
   return (
-    <div className="max-w-5xl">
-      <AblageView initial={getDocs(today)} initialFolders={folders} today={today} />
-    </div>
+    <>
+      <PageTitle kicker="Modul // Archiv" title="Ablage">
+        {docs.length} {docs.length === 1 ? "Datei" : "Dateien"} in {folders.length} {folders.length === 1 ? "Ordner" : "Ordnern"}, zusammen {formatSize(total)}. Privat gespeichert, nur mit Login abrufbar.
+      </PageTitle>
+      {!storage ? (
+        <p role="alert" className="mb-6 border border-warn/50 bg-warn/10 px-4 py-3 text-[14px] text-warn">
+          Dateispeicher noch nicht verbunden: Vercel → home-dashboard → Storage → Create → Blob (Private) → mit dem Projekt verbinden, dann neu deployen.
+        </p>
+      ) : null}
+      <AblageView docs={docs} folders={folders} subjects={subjects} today={today} storageReady={storage} />
+    </>
   );
 }

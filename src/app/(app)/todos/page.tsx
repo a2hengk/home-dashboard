@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { requireUser } from "@/lib/session";
 import { todayISO } from "@/lib/dates";
-import { getTodos } from "@/lib/sample-data";
-import { TodoBoard } from "@/components/todo-board";
-import { PageHeader, PageSkeleton } from "@/components/ui";
+import { getSubjects, getTodos } from "@/lib/data";
+import { requireUser } from "@/lib/session";
+import { TodoBoard, TodoQuickAdd } from "@/components/todos";
+import { HudPanel, PageSkeleton, PageTitle } from "@/components/hud";
 
 export const metadata: Metadata = { title: "Todos" };
 
@@ -20,15 +20,20 @@ async function Todos() {
   // Auth-Prüfung hier und nicht nur im Layout: Seite und Layout rendern parallel
   await requireUser();
   const today = todayISO();
-  const todos = getTodos(today);
-  const open = todos.filter((t) => !t.done).length;
+  const [todos, subjects] = await Promise.all([getTodos(), getSubjects()]);
+  const open = todos.filter((t) => !t.done);
 
   return (
     <div className="max-w-3xl">
-      <PageHeader title="Todos">
-        {open} offen, davon {todos.filter((t) => !t.done && t.area === "schule").length} für die Schule.
-      </PageHeader>
-      <TodoBoard initial={todos} today={today} />
+      <PageTitle kicker="Modul // Aufgaben" title="Todos">
+        {open.length} offen, davon {open.filter((t) => t.area === "schule").length} für die Schule.
+      </PageTitle>
+      <HudPanel label="Neu erfassen" code="IN" className="mb-5">
+        <TodoQuickAdd subjects={subjects} today={today} />
+      </HudPanel>
+      <HudPanel label="Aufgaben" code={`TD-${String(open.length).padStart(2, "0")}`}>
+        <TodoBoard todos={todos} today={today} />
+      </HudPanel>
     </div>
   );
 }

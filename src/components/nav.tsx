@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { House, ListChecks, GraduationCap, FolderOpen, LogOut } from "lucide-react";
+import { House, ListChecks, CalendarDays, GraduationCap, FolderOpen, Power } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { Clock } from "./clock";
 
 const items = [
   { href: "/", label: "Heute", icon: House },
   { href: "/todos", label: "Todos", icon: ListChecks },
+  { href: "/termine", label: "Termine", icon: CalendarDays },
   { href: "/schule", label: "Schule", icon: GraduationCap },
   { href: "/ablage", label: "Ablage", icon: FolderOpen },
 ] as const;
@@ -23,52 +25,42 @@ export function Nav() {
   return <NavLinks pathname={pathname} />;
 }
 
-function SignOut() {
+function useSignOut() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  return (
-    <button
-      type="button"
-      disabled={busy}
-      onClick={async () => {
-        setBusy(true);
-        await authClient.signOut();
-        router.replace("/login");
-      }}
-      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[14px] text-faint transition-colors hover:bg-raised hover:text-ink disabled:opacity-50"
-    >
-      <LogOut size={17} strokeWidth={1.75} aria-hidden />
-      {busy ? "Abmelden…" : "Abmelden"}
-    </button>
-  );
+  const signOut = async () => {
+    setBusy(true);
+    await authClient.signOut().catch(() => null);
+    router.replace("/login");
+  };
+  return { busy, signOut };
 }
 
-/** Kleines Zeichen der App: der heutige Tag als Punkt in einem Kalenderblatt */
-export function AppMark() {
+/** Kleiner Reaktor als Logo */
+export function AppMark({ size = 36 }: { size?: number }) {
   return (
-    <span
-      aria-hidden
-      className="relative flex size-8 items-center justify-center rounded-[10px] bg-raised ring-1 ring-white/[0.06]"
-    >
-      <span className="absolute inset-x-1.5 top-1.5 h-px bg-line-strong" />
-      <span className="mt-1 size-2 rounded-full bg-accent" />
-    </span>
+    <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden>
+      <circle cx="20" cy="20" r="18" fill="none" stroke="#5ce1ff" strokeOpacity="0.5" strokeDasharray="3 3" />
+      <circle cx="20" cy="20" r="12" fill="none" stroke="#5ce1ff" strokeWidth="1.5" />
+      <circle cx="20" cy="20" r="5" fill="#a6f1ff" style={{ filter: "drop-shadow(0 0 4px #5ce1ff)" }} />
+    </svg>
   );
 }
 
 export function NavLinks({ pathname }: { pathname: string | null }) {
+  const { busy, signOut } = useSignOut();
   return (
     <>
-      {/* Desktop: schwebende Seitenleiste */}
+      {/* Desktop: schmale HUD-Leiste links */}
       <nav
         aria-label="Hauptnavigation"
-        className="fixed inset-y-3 left-3 hidden w-56 flex-col rounded-[var(--radius-panel)] border border-white/[0.05] bg-surface p-3 md:flex"
+        className="fixed inset-y-0 left-0 z-30 hidden w-[88px] flex-col items-center border-r border-line bg-[rgba(2,8,14,0.85)] py-5 backdrop-blur md:flex"
       >
-        <div className="flex items-center gap-2.5 px-2 pb-6 pt-1.5">
-          <AppMark />
-          <span className="text-[15px] font-semibold tracking-tight text-ink">Dashboard</span>
-        </div>
-        <ul className="flex flex-col gap-1">
+        <Link href="/" aria-label="Start" className="mb-1">
+          <AppMark size={40} />
+        </Link>
+        <span className="hud-label mb-8 text-[9px] text-hud-dim">Lunas OS</span>
+        <ul className="flex flex-col gap-2">
           {items.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (
@@ -76,35 +68,55 @@ export function NavLinks({ pathname }: { pathname: string | null }) {
                 <Link
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] transition-colors ${
-                    active
-                      ? "bg-raised text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-                      : "text-muted hover:bg-raised/60 hover:text-ink"
+                  className={`relative flex w-[68px] flex-col items-center gap-1 py-2.5 transition-colors ${
+                    active ? "text-hud-strong" : "text-faint hover:text-hud"
                   }`}
                 >
-                  <Icon
-                    size={17}
-                    strokeWidth={1.75}
-                    className={active ? "text-accent" : "text-faint"}
-                    aria-hidden
-                  />
-                  {label}
+                  {active ? (
+                    <span aria-hidden className="absolute -left-[10px] top-1/2 h-8 w-[3px] -translate-y-1/2 bg-hud shadow-[0_0_10px_#5ce1ff]" />
+                  ) : null}
+                  <Icon size={20} strokeWidth={1.5} aria-hidden style={active ? { filter: "drop-shadow(0 0 6px #5ce1ff)" } : undefined} />
+                  <span className="hud-label text-[9px] tracking-[0.14em]">{label}</span>
                 </Link>
               </li>
             );
           })}
         </ul>
-        <div className="mt-auto border-t border-line pt-3">
-          <SignOut />
+        <div className="mt-auto flex flex-col items-center gap-4">
+          <Clock className="text-[11px] text-hud-dim" />
+          <button
+            type="button"
+            onClick={signOut}
+            disabled={busy}
+            aria-label="Abmelden"
+            title="Abmelden"
+            className="text-faint transition-colors hover:text-alert disabled:opacity-40"
+          >
+            <Power size={18} strokeWidth={1.5} aria-hidden />
+          </button>
         </div>
       </nav>
 
-      {/* Handy: schwebende Leiste unten */}
+      {/* Handy: Kopfzeile oben mit Logo und Abmelden */}
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-[rgba(2,8,14,0.85)] px-4 py-2.5 backdrop-blur md:hidden">
+        <Link href="/" className="flex items-center gap-2">
+          <AppMark size={26} />
+          <span className="hud-label text-[11px] text-hud">Lunas OS</span>
+        </Link>
+        <div className="flex items-center gap-4">
+          <Clock className="text-[12px] text-hud-dim" />
+          <button type="button" onClick={signOut} disabled={busy} aria-label="Abmelden" className="text-faint hover:text-alert">
+            <Power size={17} strokeWidth={1.5} aria-hidden />
+          </button>
+        </div>
+      </div>
+
+      {/* Handy: Leiste unten */}
       <nav
         aria-label="Hauptnavigation"
-        className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 rounded-2xl border border-white/[0.06] bg-surface/90 shadow-[0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur-md md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-[rgba(2,8,14,0.92)] pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
-        <ul className="grid grid-cols-4 p-1.5">
+        <ul className="grid grid-cols-5">
           {items.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (
@@ -112,17 +124,11 @@ export function NavLinks({ pathname }: { pathname: string | null }) {
                 <Link
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] transition-colors ${
-                    active ? "bg-raised text-ink" : "text-faint"
-                  }`}
+                  className={`relative flex flex-col items-center gap-1 py-2.5 ${active ? "text-hud-strong" : "text-faint"}`}
                 >
-                  <Icon
-                    size={19}
-                    strokeWidth={1.75}
-                    className={active ? "text-accent" : undefined}
-                    aria-hidden
-                  />
-                  {label}
+                  {active ? <span aria-hidden className="absolute inset-x-4 top-0 h-[2px] bg-hud shadow-[0_0_8px_#5ce1ff]" /> : null}
+                  <Icon size={19} strokeWidth={1.5} aria-hidden />
+                  <span className="hud-label text-[9px] tracking-[0.1em]">{label}</span>
                 </Link>
               </li>
             );

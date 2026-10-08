@@ -6,14 +6,14 @@ import { Plus } from "lucide-react";
 export const DOC_DRAG_TYPE = "application/x-dashboard-doc";
 
 /**
- * Ordner als Bauteil: Reiter + Rückwand, dazwischen Blätter (wenn etwas drin liegt),
- * davor die Klappe mit Name und Anzahl. Beim Hover und beim Reinziehen klappt die
- * Klappe leicht nach vorne.
+ * Ordner als Hologramm: Reiter + Rückwand als Drahtgitter, dazwischen leuchtende
+ * Blätter (wenn etwas drin liegt), davor eine halbdurchsichtige Klappe.
+ * Beim Hover und beim Reinziehen klappt sie nach vorne und leuchtet auf.
  */
 export function FolderTile({
   name,
   count,
-  color,
+  color = "#5ce1ff",
   onOpen,
   onDropDoc,
   onDropFiles,
@@ -26,6 +26,7 @@ export function FolderTile({
   onDropFiles: (files: FileList) => void;
 }) {
   const [over, setOver] = useState(false);
+  const c = (a: number) => `color-mix(in srgb, ${color} ${a}%, transparent)`;
 
   return (
     <button
@@ -46,51 +47,35 @@ export function FolderTile({
         else if (e.dataTransfer.files.length) onDropFiles(e.dataTransfer.files);
       }}
       aria-label={`Ordner ${name}, ${count} ${count === 1 ? "Datei" : "Dateien"}`}
-      className="group relative block aspect-[5/4] w-full rounded-lg text-left [perspective:700px]"
+      className="group relative block aspect-[5/4] w-full text-left [perspective:700px]"
+      style={{ filter: over ? `drop-shadow(0 0 14px ${color})` : undefined }}
     >
       {/* Reiter */}
       <span
         aria-hidden
-        className="absolute left-0 top-0 h-4 w-[44%] rounded-t-lg"
-        style={{
-          background: color
-            ? `color-mix(in srgb, ${color} 55%, var(--color-folder-back))`
-            : "var(--color-folder-back)",
-          clipPath: "polygon(0 0, 82% 0, 100% 100%, 0 100%)",
-        }}
+        className="absolute left-0 top-0 h-4 w-[44%]"
+        style={{ background: c(35), clipPath: "polygon(0 0, 82% 0, 100% 100%, 0 100%)" }}
       />
       {/* Rückwand */}
-      <span
-        aria-hidden
-        className={`absolute inset-x-0 bottom-0 top-3.5 rounded-lg rounded-tl-none bg-folder-back ring-1 transition-shadow ${
-          over ? "ring-accent" : "ring-transparent"
-        }`}
-      />
-      {/* Blätter, nur wenn etwas drin liegt */}
+      <span aria-hidden className="absolute inset-x-0 bottom-0 top-3.5 transition-colors" style={{ background: c(over ? 16 : 8), boxShadow: `inset 0 0 0 1px ${c(40)}` }} />
+      {/* Blätter als Lichtlinien */}
       {count > 0 ? (
         <>
-          <span
-            aria-hidden
-            className="absolute left-[9%] right-[16%] top-[17%] h-1/3 -rotate-[2.5deg] rounded-sm bg-paper transition-transform duration-200 group-hover:-translate-y-1"
-          />
+          <span aria-hidden className="absolute left-[9%] right-[16%] top-[17%] h-1/3 -rotate-[2.5deg] transition-transform duration-200 group-hover:-translate-y-1" style={{ background: c(18), boxShadow: `inset 0 0 0 1px ${c(55)}` }} />
           {count > 1 ? (
-            <span
-              aria-hidden
-              className="absolute left-[15%] right-[9%] top-[21%] h-1/3 rotate-[1.5deg] rounded-sm bg-paper-light transition-transform duration-200 group-hover:-translate-y-0.5"
-            />
+            <span aria-hidden className="absolute left-[15%] right-[9%] top-[21%] h-1/3 rotate-[1.5deg] transition-transform duration-200 group-hover:-translate-y-0.5" style={{ background: c(26), boxShadow: `inset 0 0 0 1px ${c(70)}` }} />
           ) : null}
         </>
       ) : null}
       {/* Klappe */}
       <span
-        className={`absolute inset-x-0 bottom-0 top-[38%] flex origin-bottom flex-col justify-end rounded-lg border-t border-white/[0.06] bg-folder-front px-3.5 pb-3 transition-transform duration-200 ${
-          over
-            ? "[transform:rotateX(-24deg)]"
-            : "group-hover:[transform:rotateX(-10deg)] group-focus-visible:[transform:rotateX(-10deg)]"
+        className={`absolute inset-x-0 bottom-0 top-[38%] flex origin-bottom flex-col justify-end px-3.5 pb-3 backdrop-blur-[3px] transition-transform duration-200 ${
+          over ? "[transform:rotateX(-26deg)]" : "group-hover:[transform:rotateX(-12deg)] group-focus-visible:[transform:rotateX(-12deg)]"
         }`}
+        style={{ background: "rgba(4,14,22,0.82)", boxShadow: `inset 0 1px 0 ${color}, inset 0 0 0 1px ${c(45)}` }}
       >
-        <span className="truncate text-[14px] font-medium leading-tight text-ink">{name}</span>
-        <span className="text-[12px] text-faint">
+        <span className="truncate font-display text-[15px] font-bold uppercase leading-tight tracking-wider text-ink">{name}</span>
+        <span className="hud-label text-[9px]" style={{ color }}>
           {over ? "Loslassen zum Ablegen" : count === 0 ? "Leer" : `${count} ${count === 1 ? "Datei" : "Dateien"}`}
         </span>
       </span>
@@ -112,11 +97,8 @@ export function NewFolderTile({ onCreate }: { onCreate: (name: string) => void }
 
   return (
     <div className="relative aspect-[5/4] w-full">
-      <span
-        aria-hidden
-        className="absolute left-0 top-0 h-4 w-[44%] rounded-t-lg border border-b-0 border-dashed border-line-strong"
-      />
-      <div className="absolute inset-x-0 bottom-0 top-[15px] flex flex-col items-center justify-center rounded-lg rounded-tl-none border border-dashed border-line-strong px-3">
+      <span aria-hidden className="absolute left-0 top-0 h-4 w-[44%] border border-b-0 border-dashed border-line-strong" />
+      <div className="absolute inset-x-0 bottom-0 top-[15px] flex flex-col items-center justify-center border border-dashed border-line-strong px-3">
         {editing ? (
           <form
             onSubmit={(e) => {
@@ -134,19 +116,24 @@ export function NewFolderTile({ onCreate }: { onCreate: (name: string) => void }
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={submit}
-              onKeyDown={(e) => e.key === "Escape" && (setName(""), setEditing(false))}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setName("");
+                  setEditing(false);
+                }
+              }}
               placeholder="Name"
-              className="w-full rounded-md bg-raised px-2.5 py-1.5 text-center text-[14px] text-ink placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-accent"
+              className="w-full border border-line bg-void/70 px-2.5 py-1.5 text-center text-[14px] text-ink placeholder:text-faint focus:border-hud focus:outline-none"
             />
-            <span className="mt-1.5 block text-center text-[12px] text-faint">Enter zum Anlegen</span>
+            <span className="hud-label mt-1.5 block text-center text-[9px] text-faint">Enter zum Anlegen</span>
           </form>
         ) : (
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="flex size-full flex-col items-center justify-center gap-1.5 rounded-lg text-[14px] text-muted hover:text-ink"
+            className="hud-label flex size-full flex-col items-center justify-center gap-1.5 text-[10px] text-faint hover:text-hud"
           >
-            <Plus size={18} strokeWidth={1.75} aria-hidden />
+            <Plus size={18} strokeWidth={1.5} aria-hidden />
             Neuer Ordner
           </button>
         )}
@@ -155,13 +142,12 @@ export function NewFolderTile({ onCreate }: { onCreate: (name: string) => void }
   );
 }
 
-/** Kleine Ordner-Form für Überschriften und Listen */
-export function FolderGlyph({ color, size = 20 }: { color?: string; size?: number }) {
-  const tab = color ? `color-mix(in srgb, ${color} 55%, var(--color-folder-back))` : "var(--color-paper)";
+/** Kleine Ordner-Form für Überschriften */
+export function FolderGlyph({ color = "#5ce1ff", size = 20 }: { color?: string; size?: number }) {
   return (
-    <svg width={size} height={size * 0.8} viewBox="0 0 20 16" aria-hidden className="shrink-0">
-      <path d="M1 3a2 2 0 0 1 2-2h4.2l2 2H17a2 2 0 0 1 2 2v1H1z" fill={tab} />
-      <rect x="1" y="5" width="18" height="10" rx="2" fill="var(--color-folder-front)" stroke="var(--color-line-strong)" strokeWidth="0.75" />
+    <svg viewBox="0 0 20 16" width={size} height={size * 0.8} aria-hidden className="shrink-0" style={{ filter: `drop-shadow(0 0 4px ${color})` }}>
+      <path d="M1 3a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v1H1z" fill={color} fillOpacity="0.4" />
+      <rect x="1" y="5" width="18" height="10" fill="rgba(4,14,22,0.9)" stroke={color} strokeWidth="1" />
     </svg>
   );
 }

@@ -25,10 +25,10 @@ export function SignInButton({ disabled }: { disabled?: boolean }) {
           errorCallbackURL: "/login?error=not_allowed",
         });
       }}
-      className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-ink px-4 py-3 text-[15px] font-medium text-base transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+      className="hud-cut flex w-full items-center justify-center gap-2.5 bg-hud/15 px-4 py-3 font-display text-[15px] font-bold uppercase tracking-[0.16em] text-hud-strong ring-1 ring-inset ring-hud/60 transition hover:bg-hud/25 hover:shadow-[0_0_24px_rgba(92,225,255,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
     >
       <GitHubIcon />
-      {busy ? "Weiter zu GitHub…" : "Mit GitHub anmelden"}
+      {busy ? "Verbinde mit GitHub…" : "Mit GitHub anmelden"}
     </button>
   );
 }

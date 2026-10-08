@@ -1,40 +1,63 @@
 @import "tailwindcss";
 
 /*
-  Farben: dunkles Blau-Grau als Grund, darauf etwas hellere Panels.
-  Kühles Blau ist der Akzent für "heute" und Aktionen.
-  Termine haben eigene Farben: Prüfung koralle, Abgabe bernstein, privat blau.
-  Lernfeld-Farben sind bewusst gedämpft, damit sie neben beidem nicht schreien.
+  LUNAS OS – HUD im Stil eines Helm-Displays.
+  Fast schwarzer Grund, Cyan als Licht, dünne Linien, Eckklammern.
+  Warnfarben nur mit Bedeutung: Prüfung/überfällig = Alarm-Orange, Abgabe = Bernstein.
 */
 @theme {
-  --color-base: #0f141a;
-  --color-surface: #161d26;
-  --color-raised: #1e2631;
-  --color-line: #252e3a;
-  --color-line-strong: #333d4a;
+  --color-void: #02060b;
+  --color-deep: #061019;
+  --color-panel: rgba(8, 24, 36, 0.62);
+  --color-panel-solid: #08151f;
+  --color-raised: rgba(92, 225, 255, 0.06);
 
-  --color-exam: #ef8f86;
-  --color-deadline: #e3b45f;
-  --color-private: #7ea9de;
+  --color-hud: #5ce1ff;
+  --color-hud-strong: #a6f1ff;
+  --color-hud-dim: rgba(92, 225, 255, 0.55);
+  --color-line: rgba(92, 225, 255, 0.16);
+  --color-line-strong: rgba(92, 225, 255, 0.34);
 
-  --radius-panel: 1.125rem;
+  --color-ink: #d9f7ff;
+  --color-muted: #84aebe;
+  --color-faint: #4d7385;
 
-  --color-ink: #e4e9f0;
-  --color-muted: #94a0b1;
-  --color-faint: #637082;
+  --color-alert: #ff6a3d;
+  --color-warn: #ffb547;
+  --color-ok: #4cf0a6;
 
-  --color-accent: #7ea9de;
-  --color-accent-strong: #a3c3ec;
-  --color-accent-ink: #0f1a28;
-  --color-danger: #df8b7f;
+  /* Termine */
+  --color-exam: #ff6a3d;
+  --color-deadline: #ffb547;
+  --color-private: #a6f1ff;
 
-  /* Ordner in der Ablage: Rückwand dunkler als die Klappe, Papier dazwischen */
-  --color-folder-back: #222b37;
-  --color-folder-front: #2b3542;
-  --color-paper: #5d6a7b;
-  --color-paper-light: #7b8798;
+  --font-display: "Rajdhani", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
 
-  --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --animate-spin-slow: spin 40s linear infinite;
+  --animate-spin-rev: spin-rev 26s linear infinite;
+  --animate-scan: scan 9s linear infinite;
+  --animate-flicker: flicker 4s steps(1) infinite;
+
+  @keyframes spin-rev {
+    to {
+      transform: rotate(-360deg);
+    }
+  }
+  @keyframes scan {
+    from {
+      transform: translateY(-20vh);
+    }
+    to {
+      transform: translateY(120vh);
+    }
+  }
+  @keyframes flicker {
+    0%, 92%, 100% { opacity: 1; }
+    93% { opacity: 0.55; }
+    95% { opacity: 1; }
+    97% { opacity: 0.7; }
+  }
 }
 
 :root {
@@ -42,34 +65,102 @@
 }
 
 html {
-  background: var(--color-base);
+  background: var(--color-void);
 }
 
 body {
-  background: var(--color-base);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(92, 225, 255, 0.10), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(92, 225, 255, 0.05), transparent 60%),
+    var(--color-void);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.5;
-  font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Raster im Hintergrund, zum Rand hin ausgeblendet */
+.hud-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(92, 225, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(92, 225, 255, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, black 30%, transparent 85%);
+}
+
+/* Scanlines über allem, plus ein langsam wandernder Lichtstreifen */
+.hud-scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.022) 0,
+    rgba(255, 255, 255, 0.022) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  overflow: hidden;
+}
+.hud-scanlines::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 18vh;
+  background: linear-gradient(180deg, transparent, rgba(92, 225, 255, 0.045), transparent);
+  animation: var(--animate-scan);
+}
+
+.glow {
+  text-shadow: 0 0 12px rgba(92, 225, 255, 0.55), 0 0 2px rgba(166, 241, 255, 0.8);
+}
+.glow-alert {
+  text-shadow: 0 0 14px rgba(255, 106, 61, 0.55), 0 0 2px rgba(255, 190, 170, 0.8);
+}
+
+/* HUD-Label: Großbuchstaben, gesperrt. Hier gewollt, das ist die Sprache eines HUDs. */
+.hud-label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 12px;
+}
+
+/* Schräg angeschnittene Ecken für Buttons und Eingaben */
+.hud-cut {
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  background: rgba(92, 225, 255, 0.3);
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 1px solid var(--color-hud);
   outline-offset: 2px;
-  border-radius: 4px;
+  box-shadow: 0 0 0 3px rgba(92, 225, 255, 0.2);
+}
+
+input,
+select,
+textarea {
+  color-scheme: dark;
 }
 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
+    animation: none !important;
     transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
   }
 }

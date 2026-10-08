@@ -1,35 +1,43 @@
-# Home Dashboard
+# LUNAS OS – Home Dashboard
 
-Persönliches Dashboard für Alltag und Berufsschule: Todos, Termine mit Mail-Reminder und eine private Ablage für Schulunterlagen, alles nach Lernfeld sortiert.
+Persönliches Dashboard für Alltag und Berufsschule im HUD-Stil: Todos, Termine, Stundenplan, Noten und eine private Ablage für Schulunterlagen, alles nach Lernfeld sortiert. Nur ein Nutzer, Login über GitHub.
 
 ## Stack
 
-Next.js (App Router) · TypeScript · Tailwind · Drizzle ORM · Postgres (Neon) · Cloudflare R2 · Resend · Vercel
+Next.js 16 (App Router, Cache Components) · TypeScript · Tailwind 4 · Drizzle ORM · Postgres (Neon über Vercel) · Vercel Blob (privat) · Better Auth (GitHub) · Vercel
 
-## Stand
+## Seiten
 
-Probe-UI mit Beispieldaten aus `src/lib/sample-data.ts`, noch ohne Datenbank und Login:
+- `/` Heute: Reaktor-Countdown bis zur nächsten Prüfung, Systemstatus, 14-Tage-Zeitleiste mit Schultagen und farbigen Terminen, fällige Todos, Stundenplan
+- `/todos` Schnellerfassung, Filter Schule/Privat, Gruppen nach Fälligkeit, abhaken und löschen
+- `/termine` Prüfungen, Abgaben und private Termine, als wichtig markieren
+- `/schule` Fächer und Lernfelder verwalten, Stundenplan-Editor
+- `/schule/[kuerzel]` ein Fach: Dateien, Todos, Termine, Noten mit Schnitt
+- `/ablage` Ordner, Upload in privaten Blob-Speicher, Öffnen/Herunterladen nur mit Login, Verschieben per Ziehen oder Auswahl
 
-- `/` Heute: Datum, die nächsten 14 Tage mit Schultagen, Prüfungen und Abgaben, fällige Todos, Stundenplan
-- `/todos` Schnellerfassung, Filter Schule/Privat, Gruppen nach Fälligkeit
-- `/schule` alle Fächer mit offenen Todos, nächster Prüfung, Dokumenten, Schnitt
-- `/schule/[kuerzel]` ein Lernfeld mit Dokumenten, Todos, Terminen und Noten
-- `/ablage` Ordner zum Ablegen (per Ziehen oder Auswahl), Übersicht über alle Dateien, Suche, Filter nach Fach, Upload direkt in einen Ordner. Dateien und neue Ordner bleiben vorerst nur lokal im Browser
+Beim allerersten Migrieren werden die FIAE-Lernfelder (LF1 bis LF12a) plus Deutsch, Englisch und Wirtschaft angelegt.
 
-## Setup
+## Einrichtung auf Vercel
+
+1. Storage → Create → Neon (Postgres), mit dem Projekt verbinden
+2. Storage → Create → Blob, Zugriff **Private**, mit dem Projekt verbinden
+3. GitHub OAuth App anlegen, Callback `https://<domain>/api/auth/callback/github`
+4. Env-Variablen setzen: `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ALLOWED_GITHUB_LOGINS`
+5. Neu deployen. Migrationen laufen beim Production-Build automatisch (`scripts/migrate.mjs`)
+
+Die Login-Seite zeigt an, was noch fehlt.
+
+## Lokal
 
 ```bash
 npm install
 cp .env.example .env.local   # Werte eintragen
-npm run db:generate
 npm run db:migrate
-npm run dev
+npm run dev                   # DEV_SKIP_AUTH=1 überspringt den Login, nur mit next dev
 ```
 
-## Roadmap
+## Sicherheit
 
-1. Fundament: Auth, DB, Deploy
-2. MVP: Lernfelder, Todos, Schul-Ablage, Heute-Seite
-3. Termine und Mail-Reminder
-4. Stundenplan und Noten
-5. Extras: Prüfungsvorbereitung, KI-Lernhilfe
+- Proxy leitet ohne Session-Cookie zum Login, jede Seite, Server Action, Datenabfrage und Datei-Route prüft die Session zusätzlich auf dem Server
+- Nur GitHub-Accounts aus `ALLOWED_GITHUB_LOGINS` werden überhaupt angelegt
+- Dateien liegen in einem privaten Blob-Store und werden nur über `/api/files/[id]` nach Login-Prüfung ausgeliefert

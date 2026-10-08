@@ -1,7 +1,7 @@
-import type { EventItem } from "./sample-data";
+import type { EventType } from "./types";
 
-/** Farbe und Name je Termintyp. Farben kommen aus globals.css (--color-exam usw.). */
-export const eventMeta: Record<EventItem["type"], { label: string; color: string }> = {
+/** Farbe und Name je Termintyp. Farben kommen aus globals.css. */
+export const eventMeta: Record<EventType, { label: string; color: string }> = {
   pruefung: { label: "Prüfung", color: "var(--color-exam)" },
   abgabe: { label: "Abgabe", color: "var(--color-deadline)" },
   privat: { label: "Termin", color: "var(--color-private)" },

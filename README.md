@@ -14,7 +14,7 @@ Probe-UI mit Beispieldaten aus `src/lib/sample-data.ts`, noch ohne Datenbank und
 - `/todos` Schnellerfassung, Filter Schule/Privat, Gruppen nach Fälligkeit
 - `/schule` alle Fächer mit offenen Todos, nächster Prüfung, Dokumenten, Schnitt
 - `/schule/[kuerzel]` ein Lernfeld mit Dokumenten, Todos, Terminen und Noten
-- `/ablage` Suche, Filter nach Fach, Upload-Feld (Dateien bleiben vorerst nur lokal in der Liste)
+- `/ablage` Ordner zum Ablegen (per Ziehen oder Auswahl), Übersicht über alle Dateien, Suche, Filter nach Fach, Upload direkt in einen Ordner. Dateien und neue Ordner bleiben vorerst nur lokal im Browser
 
 ## Setup
 

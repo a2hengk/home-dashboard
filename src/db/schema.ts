@@ -62,6 +62,15 @@ export const reminders = pgTable(
   (t) => [index("reminders_due_idx").on(t.remindAt)],
 );
 
+// Eigene Ordner in der Ablage. Optional einem Fach zugeordnet (Farbe am Reiter).
+export const folders = pgTable("folders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  subjectId: uuid("subject_id").references(() => subjects.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Ein Dokument liegt in höchstens einem Ordner; ohne Ordner nur in der Übersicht.
 export const documents = pgTable("documents", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
@@ -69,6 +78,7 @@ export const documents = pgTable("documents", {
   mimeType: text("mime_type").notNull(),
   sizeBytes: integer("size_bytes").notNull(),
   subjectId: uuid("subject_id").references(() => subjects.id, { onDelete: "set null" }),
+  folderId: uuid("folder_id").references(() => folders.id, { onDelete: "set null" }),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

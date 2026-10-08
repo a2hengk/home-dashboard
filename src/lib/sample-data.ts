@@ -29,10 +29,17 @@ export type EventItem = {
   subject?: string;
 };
 
+export type Folder = {
+  id: string;
+  name: string;
+  subject?: string; // kuerzel, färbt den Reiter
+};
+
 export type Doc = {
   id: string;
   name: string;
   subject?: string;
+  folder?: string; // folder id
   tags: string[];
   sizeBytes: number;
   uploaded: string;
@@ -140,20 +147,28 @@ export function getDocs(today: string): Doc[] {
   const d = (n: number) => addDays(today, n);
   const mb = (n: number) => Math.round(n * 1024 * 1024);
   return [
-    { id: "d1", name: "SQL_Grundlagen_Skript.pdf", subject: "LF5", tags: ["Skript"], sizeBytes: mb(2.4), uploaded: d(0) },
-    { id: "d2", name: "ER-Modell_Uebungen.pdf", subject: "LF5", tags: ["Übung"], sizeBytes: mb(0.8), uploaded: d(-1) },
-    { id: "d3", name: "ER-Modell_Loesungen.pdf", subject: "LF5", tags: ["Lösung"], sizeBytes: mb(0.6), uploaded: d(-1) },
-    { id: "d4", name: "Subnetting_Spickzettel.pdf", subject: "LF3", tags: ["Spickzettel"], sizeBytes: mb(0.2), uploaded: d(-2) },
-    { id: "d5", name: "OSI-Modell_Tafelbild.jpg", subject: "LF3", tags: ["Mitschrift"], sizeBytes: mb(3.1), uploaded: d(-7) },
+    { id: "d1", name: "SQL_Grundlagen_Skript.pdf", subject: "LF5", folder: "klassenarbeit-sql", tags: ["Skript"], sizeBytes: mb(2.4), uploaded: d(0) },
+    { id: "d2", name: "ER-Modell_Uebungen.pdf", subject: "LF5", folder: "klassenarbeit-sql", tags: ["Übung"], sizeBytes: mb(0.8), uploaded: d(-1) },
+    { id: "d3", name: "ER-Modell_Loesungen.pdf", subject: "LF5", folder: "klassenarbeit-sql", tags: ["Lösung"], sizeBytes: mb(0.6), uploaded: d(-1) },
+    { id: "d4", name: "Subnetting_Spickzettel.pdf", subject: "LF3", folder: "spickzettel", tags: ["Spickzettel"], sizeBytes: mb(0.2), uploaded: d(-2) },
+    { id: "d5", name: "OSI-Modell_Tafelbild.jpg", subject: "LF3", folder: "mitschriften", tags: ["Mitschrift"], sizeBytes: mb(3.1), uploaded: d(-7) },
     { id: "d6", name: "Unit2_Vocabulary.pdf", subject: "EN", tags: ["Übung"], sizeBytes: mb(0.4), uploaded: d(-7) },
-    { id: "d7", name: "Angebotsvergleich.xlsx", subject: "LF2", tags: ["Abgabe"], sizeBytes: mb(0.1), uploaded: d(-8) },
-    { id: "d8", name: "Unternehmensformen.docx", subject: "LF1", tags: ["Mitschrift"], sizeBytes: mb(0.3), uploaded: d(-14) },
+    { id: "d7", name: "Angebotsvergleich.xlsx", subject: "LF2", folder: "abgaben", tags: ["Abgabe"], sizeBytes: mb(0.1), uploaded: d(-8) },
+    { id: "d8", name: "Unternehmensformen.docx", subject: "LF1", folder: "mitschriften", tags: ["Mitschrift"], sizeBytes: mb(0.3), uploaded: d(-14) },
     { id: "d9", name: "Schutzbedarf_Arbeitsblatt.pdf", subject: "LF4", tags: ["Übung"], sizeBytes: mb(1.2), uploaded: d(-15) },
     { id: "d10", name: "Ticketsystem_Fallbeispiel.pdf", subject: "LF6", tags: ["Skript"], sizeBytes: mb(1.7), uploaded: d(-21) },
     { id: "d11", name: "Eroerterung_Aufbau.pdf", subject: "DE", tags: ["Skript"], sizeBytes: mb(0.5), uploaded: d(-22) },
-    { id: "d12", name: "Stundenplan_Schuljahr.pdf", tags: ["Orga"], sizeBytes: mb(0.2), uploaded: d(-30) },
+    { id: "d12", name: "Stundenplan_Schuljahr.pdf", folder: "orga", tags: ["Orga"], sizeBytes: mb(0.2), uploaded: d(-30) },
   ];
 }
+
+export const folders: Folder[] = [
+  { id: "klassenarbeit-sql", name: "Klassenarbeit SQL", subject: "LF5" },
+  { id: "spickzettel", name: "Spickzettel" },
+  { id: "mitschriften", name: "Mitschriften" },
+  { id: "abgaben", name: "Abgaben" },
+  { id: "orga", name: "Orga" },
+];
 
 export function getGrades(today: string): Grade[] {
   const on = (subject: string, minDays: number) => lastLesson(today, subject, minDays);

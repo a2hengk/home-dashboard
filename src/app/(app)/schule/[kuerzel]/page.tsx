@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { diffDays, formatShort, todayISO } from "@/lib/dates";
 import { getDocs, getEvents, getGrades, getSubjectByKuerzel, getSubjects, getTimetable, getTodos } from "@/lib/data";
 import { requireUser } from "@/lib/session";
+import { storageMode } from "@/lib/storage";
 import { average, formatGrade, weekdayNames } from "@/lib/types";
 import { EventForm, EventList } from "@/components/events";
 import { GradeEditor } from "@/components/school";
@@ -72,7 +73,7 @@ async function Lernfeld({ params }: { params: Promise<{ kuerzel: string }> }) {
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="space-y-5">
           <HudPanel label="Dateien" code={`DOC-${String(docs.length).padStart(2, "0")}`}>
-            <SubjectFiles docs={docs} subjectId={subject.id} kuerzel={subject.kuerzel} today={today} storageReady={!!process.env.BLOB_READ_WRITE_TOKEN} />
+            <SubjectFiles docs={docs} subjectId={subject.id} kuerzel={subject.kuerzel} today={today} storage={storageMode()} />
           </HudPanel>
           <HudPanel label="Termine" code={`EV-${String(events.length).padStart(2, "0")}`}>
             <EventList events={events} today={today} showSubject={false} empty={exam ? "" : "Keine anstehenden Termine."} />

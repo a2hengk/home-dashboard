@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { todayISO } from "@/lib/dates";
 import { getDocs, getFolders, getSubjects } from "@/lib/data";
 import { requireUser } from "@/lib/session";
+import { storageMode } from "@/lib/storage";
 import { formatSize } from "@/lib/types";
 import { AblageView } from "@/components/ablage-view";
 import { PageSkeleton, PageTitle } from "@/components/hud";
@@ -23,7 +24,7 @@ async function Ablage() {
   const today = todayISO();
   const [docs, folders, subjects] = await Promise.all([getDocs(), getFolders(), getSubjects()]);
   const total = docs.reduce((s, d) => s + d.sizeBytes, 0);
-  const storage = !!process.env.BLOB_READ_WRITE_TOKEN;
+  const storage = storageMode();
 
   return (
     <>
@@ -35,7 +36,7 @@ async function Ablage() {
           Dateispeicher noch nicht verbunden: Vercel → home-dashboard → Storage → Create → Blob (Private) → mit dem Projekt verbinden, dann neu deployen.
         </p>
       ) : null}
-      <AblageView docs={docs} folders={folders} subjects={subjects} today={today} storageReady={storage} />
+      <AblageView docs={docs} folders={folders} subjects={subjects} today={today} storage={storage} />
     </>
   );
 }

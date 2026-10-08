@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { ChevronLeft, Pencil, Search, Trash2 } from "lucide-react";
 import { createFolder, deleteFolder, renameFolder } from "@/app/actions";
 import { formatSize, type Doc, type Folder, type Subject } from "@/lib/types";
+import type { StorageMode } from "@/lib/upload";
 import { FolderGlyph, FolderTile, NewFolderTile } from "./folder";
 import { DocList, DropZone, Toast, useDocs, useToast, useUploader } from "./files";
 import { HudPanel, buttonClass, fieldClass } from "./hud";
@@ -16,17 +17,17 @@ export function AblageView({
   folders,
   subjects,
   today,
-  storageReady,
+  storage,
 }: {
   docs: Doc[];
   folders: Folder[];
   subjects: Subject[];
   today: string;
-  storageReady: boolean;
+  storage: StorageMode;
 }) {
   const toast = useToast();
   const { docs, run } = useDocs(initialDocs, toast.show);
-  const { uploads, uploadFiles } = useUploader(toast.show, storageReady);
+  const { uploads, uploadFiles } = useUploader(toast.show, storage);
   const [query, setQuery] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
   const [, start] = useTransition();
@@ -78,7 +79,7 @@ export function AblageView({
         {searchBar}
         <HudPanel label="Inhalt" code={`DIR-${String(inside.length).padStart(2, "0")}`}>
           <DropZone
-            disabled={!storageReady}
+            disabled={!storage}
             uploads={uploads}
             onFiles={(f) => uploadFiles(f, { folderId: open.id, subjectId: open.subject?.id })}
             hint={`Landen direkt in ${open.name}`}
@@ -147,7 +148,7 @@ export function AblageView({
             ))}
           </div>
         ) : null}
-        <DropZone disabled={!storageReady} uploads={uploads} onFiles={(f) => uploadFiles(f, { subjectId: subjectFilter })} hint="Landen in der Übersicht, ohne Ordner" />
+        <DropZone disabled={!storage} uploads={uploads} onFiles={(f) => uploadFiles(f, { subjectId: subjectFilter })} hint="Landen in der Übersicht, ohne Ordner" />
         <DocList
           docs={visible}
           folders={folders}

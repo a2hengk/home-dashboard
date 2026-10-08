@@ -1,12 +1,12 @@
 "use client";
 
 import { useOptimistic, useRef, useState, useTransition } from "react";
-import { upload } from "@vercel/blob/client";
+import { upload, uploadPresigned } from "@vercel/blob/client";
 import { Download, File, FileImage, FileSpreadsheet, FileText, Trash2, Upload } from "lucide-react";
 import { deleteDocument, moveDocument, registerDocument } from "@/app/actions";
 import { diffDays, formatShort } from "@/lib/dates";
 import { formatSize, type Doc, type Folder } from "@/lib/types";
-import { MAX_UPLOAD_MB } from "@/lib/upload";
+import { MAX_UPLOAD_MB, type StorageMode } from "@/lib/upload";
 import { DOC_DRAG_TYPE, FolderGlyph } from "./folder";
 import { Empty, SubjectTag } from "./hud";
 
@@ -20,14 +20,14 @@ export type UploadState = { name: string; pct: number }[];
  * Lädt Dateien direkt aus dem Browser in den privaten Blob-Store (auch große Dateien)
  * und legt danach den Eintrag in der Datenbank an.
  */
-export function useUploader(onMessage: (m: string) => void, storageReady = true) {
+export function useUploader(onMessage: (m: string) => void, storage: StorageMode) {
   const [uploads, setUploads] = useState<UploadState>([]);
   const [, start] = useTransition();
 
   const uploadFiles = (files: FileList | File[], target: { folderId?: string | null; subjectId?: string | null }) => {
     const list = Array.from(files);
     if (!list.length) return;
-    if (!storageReady) {
+    if (!storage) {
       onMessage("Dateispeicher ist noch nicht verbunden. Erst in Vercel einen Blob-Store anlegen.");
       return;
     }
@@ -40,7 +40,10 @@ export function useUploader(onMessage: (m: string) => void, storageReady = true)
         }
         setUploads((u) => [...u, { name: file.name, pct: 0 }]);
         try {
-          const blob = await upload(`ablage/${safeName(file.name)}`, file, {
+          // Zufälliger Präfix, damit gleichnamige Dateien sich nicht überschreiben
+          const pathname = `ablage/${crypto.randomUUID().slice(0, 8)}-${safeName(file.name)}`;
+          const send = storage === "oidc" ? uploadPresigned : upload;
+          const blob = await send(pathname, file, {
             access: "private",
             handleUploadUrl: "/api/files/upload",
             multipart: file.size > 8 * 1024 * 1024,
@@ -59,9 +62,9 @@ export function useUploader(onMessage: (m: string) => void, storageReady = true)
           else ok++;
         } catch (e) {
           const msg = (e as Error).message ?? "";
-          // Das SDK meldet nur "Failed to retrieve the client token": Speicher fehlt oder Login abgelaufen
+          // Das SDK meldet nur "Failed to retrieve the client token / presigned URL": Speicher fehlt oder Login abgelaufen
           onMessage(
-            msg.includes("client token")
+            /client token|presigned URL/i.test(msg)
               ? `${file.name}: Upload nicht erlaubt. Speicher verbunden und noch eingeloggt?`
               : `${file.name}: ${msg || "Upload fehlgeschlagen"}`,
           );

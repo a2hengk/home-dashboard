@@ -4,10 +4,12 @@ export type Subject = { id: string; kuerzel: string; name: string; farbe: string
 
 export type SubjectRef = Pick<Subject, "id" | "kuerzel" | "name" | "farbe">;
 
+export type TodoArea = "schule" | "privat" | "arbeit";
+
 export type Todo = {
   id: string;
   title: string;
-  area: "schule" | "privat";
+  area: TodoArea;
   subject: SubjectRef | null;
   due: string | null; // YYYY-MM-DD
   important: boolean;
@@ -26,9 +28,12 @@ export type EventItem = {
   subject: SubjectRef | null;
 };
 
+export type WeekRhythm = "jede" | "a" | "b";
+
 export type Slot = {
   id: string;
   weekday: number; // 1 = Montag
+  rhythm: WeekRhythm;
   start: string;
   end: string;
   room: string | null;

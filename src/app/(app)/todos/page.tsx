@@ -26,7 +26,8 @@ async function Todos() {
   return (
     <div className="max-w-3xl">
       <PageTitle kicker="Modul // Aufgaben" title="Todos">
-        {open.length} offen, davon {open.filter((t) => t.area === "schule").length} für die Schule.
+        {open.length} offen: {open.filter((t) => t.area === "schule").length} Schule, {open.filter((t) => t.area === "arbeit").length} Arbeit,{" "}
+        {open.filter((t) => t.area === "privat").length} privat.
       </PageTitle>
       <HudPanel label="Neu erfassen" code="IN" className="mb-5">
         <TodoQuickAdd subjects={subjects} today={today} />

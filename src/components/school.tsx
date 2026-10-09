@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
 import { createGrade, createSlot, createSubject, deleteGrade, deleteSlot, deleteSubject, updateSubject } from "@/app/actions";
 import { formatShort } from "@/lib/dates";
+import { nextDateOf, rhythmFor } from "@/lib/timetable";
 import { formatGrade, gradeTypeLabel, weekdayNames, type Grade, type GradeType, type Slot, type Subject } from "@/lib/types";
 import { Empty, buttonClass, fieldClass, labelClass } from "./hud";
 
@@ -198,9 +199,10 @@ export function SubjectManager({ subjects }: { subjects: SubjectStats[] }) {
 
 /* ---------- Stundenplan ---------- */
 
-export function TimetableEditor({ slots, subjects }: { slots: Slot[]; subjects: Subject[] }) {
+export function TimetableEditor({ slots, subjects, today }: { slots: Slot[]; subjects: Subject[]; today: string }) {
   const { pending, error, run } = useAction();
   const [weekday, setWeekday] = useState(1);
+  const [rhythm, setRhythm] = useState<"jede" | "diese" | "naechste">("jede");
   const [start, setStart] = useState("07:45");
   const [end, setEnd] = useState("09:15");
   const [subjectId, setSubjectId] = useState("");
@@ -223,6 +225,11 @@ export function TimetableEditor({ slots, subjects }: { slots: Slot[]; subjects: 
                       <p className="font-display text-[12px] font-semibold text-faint">{s.start}–{s.end}</p>
                       <p className="font-display text-[14px] font-bold tracking-wider" style={{ color: s.subject.farbe }}>{s.subject.kuerzel}</p>
                       {s.room ? <p className="text-[12px] text-faint">Raum {s.room}</p> : null}
+                      {s.rhythm !== "jede" ? (
+                        <p className="hud-label mt-0.5 text-[9px] text-warn">
+                          Alle 2 Wo · nächster {formatShort(nextDateOf(s, today)).split(", ")[1]}
+                        </p>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => run(() => deleteSlot(s.id))}
@@ -243,13 +250,13 @@ export function TimetableEditor({ slots, subjects }: { slots: Slot[]; subjects: 
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          run(() => createSlot({ weekday, start, end, subjectId, room }), () => {
+          run(() => createSlot({ weekday, rhythm: rhythmFor(rhythm, today), start, end, subjectId, room }), () => {
             // Nächste Stunde direkt vorschlagen
             setStart(end);
             setRoom("");
           });
         }}
-        className="mt-5 grid items-end gap-3 border-t border-line pt-4 sm:grid-cols-[1fr_6rem_6rem_1.4fr_5rem_auto]"
+        className="mt-5 grid items-end gap-3 border-t border-line pt-4 sm:grid-cols-3 xl:grid-cols-[1fr_1.3fr_6rem_6rem_1.4fr_5rem_auto]"
       >
         <div>
           <label className={labelClass} htmlFor="slot-day">Tag</label>
@@ -257,6 +264,14 @@ export function TimetableEditor({ slots, subjects }: { slots: Slot[]; subjects: 
             {weekdayNames.map((n, i) => (
               <option key={n} value={i + 1}>{n}</option>
             ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="slot-rhythm">Rhythmus</label>
+          <select id="slot-rhythm" value={rhythm} onChange={(e) => setRhythm(e.target.value as typeof rhythm)} className={fieldClass}>
+            <option value="jede">Jede Woche</option>
+            <option value="diese">Alle 2 Wochen, ab dieser Woche</option>
+            <option value="naechste">Alle 2 Wochen, ab nächster Woche</option>
           </select>
         </div>
         <div>

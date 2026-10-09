@@ -107,6 +107,7 @@ export async function getTimetable(): Promise<Slot[]> {
     .select({
       id: t.timetableSlots.id,
       weekday: t.timetableSlots.weekday,
+      rhythm: t.timetableSlots.rhythm,
       start: t.timetableSlots.start,
       end: t.timetableSlots.end,
       room: t.timetableSlots.room,
@@ -118,6 +119,7 @@ export async function getTimetable(): Promise<Slot[]> {
   return rows.map((r) => ({
     id: r.id,
     weekday: r.weekday,
+    rhythm: r.rhythm,
     start: r.start,
     end: r.end,
     room: r.room,

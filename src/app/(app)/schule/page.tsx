@@ -53,7 +53,7 @@ async function Schule() {
         </HudPanel>
         <div id="stundenplan" className="scroll-mt-20">
           <HudPanel label="Stundenplan" code="TT-WK">
-            <TimetableEditor slots={slots} subjects={subjects} />
+            <TimetableEditor slots={slots} subjects={subjects} today={today} />
           </HudPanel>
         </div>
       </div>

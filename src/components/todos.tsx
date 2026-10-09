@@ -4,7 +4,7 @@ import { useOptimistic, useState, useTransition } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { createTodo, deleteTodo, setTodoDone } from "@/app/actions";
 import { diffDays, dueLabel } from "@/lib/dates";
-import type { Subject, Todo } from "@/lib/types";
+import type { Subject, Todo, TodoArea } from "@/lib/types";
 import { Empty, SubjectTag, buttonClass, fieldClass, fieldInlineClass } from "./hud";
 
 type Op = { kind: "toggle"; id: string; done: boolean } | { kind: "delete"; id: string };
@@ -68,7 +68,9 @@ export function TodoRow({
         ) : null}
         {todo.title}
       </span>
-      {showSubject ? <SubjectTag subject={todo.subject} /> : null}
+      {showSubject ? (
+        todo.area === "arbeit" ? <span className="hud-label shrink-0 text-[10px] text-warn">Arbeit</span> : <SubjectTag subject={todo.subject} />
+      ) : null}
       {todo.due ? (
         <span className={`w-16 shrink-0 text-right font-display text-[13px] font-semibold tracking-wide ${overdue ? "text-alert glow-alert" : "text-muted"}`}>
           {dueLabel(todo.due, today)}
@@ -144,8 +146,9 @@ export function TodoQuickAdd({
     start(async () => {
       const res = await createTodo({
         title,
-        subjectId: subject === "schule" ? null : subject || null,
-        school: subject === "schule",
+        // "" = privat, "schule"/"arbeit" = Bereich ohne Fach, sonst eine Fach-ID
+        subjectId: subject === "schule" || subject === "arbeit" ? null : subject || null,
+        area: subject === "schule" || subject === "arbeit" ? subject : "privat",
         due: due || null,
         important,
       });
@@ -180,6 +183,7 @@ export function TodoQuickAdd({
         {fixedSubjectId ? null : (
           <select value={subject} onChange={(e) => setSubject(e.target.value)} aria-label="Zuordnung" className={`${fieldInlineClass} py-1.5 text-[13px]`}>
             <option value="">Privat</option>
+            <option value="arbeit">Arbeit</option>
             <option value="schule">Schule allgemein</option>
             {subjects.map((s) => (
               <option key={s.id} value={s.id}>
@@ -201,7 +205,7 @@ export function TodoQuickAdd({
 
 /* ---------- Ganze Todo-Seite ---------- */
 
-type Filter = "alle" | "schule" | "privat";
+type Filter = "alle" | TodoArea;
 
 function groupOf(t: Todo, today: string) {
   if (!t.due) return "Ohne Datum";
@@ -238,7 +242,7 @@ export function TodoBoard({ todos: initial, today }: { todos: Todo[]; today: str
   return (
     <>
       <div role="tablist" aria-label="Filter" className="mb-5 inline-flex gap-1">
-        {(["alle", "schule", "privat"] as const).map((f) => (
+        {(["alle", "schule", "arbeit", "privat"] as const).map((f) => (
           <button
             key={f}
             role="tab"

@@ -39,7 +39,7 @@ async function run(fn: () => Promise<unknown>): Promise<Result> {
 const todoInput = z.object({
   title: z.string().trim().min(1, "Titel fehlt").max(200),
   subjectId: optionalId,
-  school: z.boolean().default(false),
+  area: z.enum(["schule", "privat", "arbeit"]).default("privat"),
   due: isoDate.nullish(),
   important: z.boolean().default(false),
 });
@@ -50,7 +50,7 @@ export async function createTodo(input: z.input<typeof todoInput>) {
     await db.insert(t.todos).values({
       title: v.title,
       subjectId: v.subjectId ?? null,
-      area: v.subjectId || v.school ? "schule" : "privat",
+      area: v.subjectId ? "schule" : v.area,
       due: v.due ?? null,
       important: v.important,
     });
@@ -143,6 +143,7 @@ export async function deleteSubject(id: string) {
 const slotInput = z
   .object({
     weekday: z.number().int().min(1).max(5),
+    rhythm: z.enum(["jede", "a", "b"]).default("jede"),
     start: hhmm,
     end: hhmm,
     subjectId: z.string().uuid("Fach fehlt"),

@@ -55,7 +55,7 @@ async function Lernfeld({ params }: { params: Promise<{ kuerzel: string }> }) {
           <h1 className="mt-2 max-w-2xl font-display text-[24px] font-semibold uppercase leading-tight tracking-wide text-ink">{subject.name}</h1>
           {mySlots.length ? (
             <p className="hud-label mt-2 text-[10px] text-faint">
-              {mySlots.map((s) => `${weekdayNames[s.weekday - 1].slice(0, 2)} ${s.start}`).join(" / ")}
+              {mySlots.map((s) => `${weekdayNames[s.weekday - 1].slice(0, 2)} ${s.start}${s.rhythm === "jede" ? "" : " (alle 2 Wochen)"}`).join(" / ")}
             </p>
           ) : null}
         </div>

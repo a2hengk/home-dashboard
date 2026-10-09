@@ -23,7 +23,7 @@ export const subjects = pgTable("subjects", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const todoArea = pgEnum("todo_area", ["schule", "privat"]);
+export const todoArea = pgEnum("todo_area", ["schule", "privat", "arbeit"]);
 
 export const todos = pgTable(
   "todos",
@@ -73,9 +73,16 @@ export const reminders = pgTable(
   (t) => [index("reminders_due_idx").on(t.remindAt)],
 );
 
+/**
+ * Jede Woche oder alle 2 Wochen. A/B zählt fortlaufend ab Montag, 1.1.2024
+ * (nicht nach KW, sonst verrutscht es in Jahren mit 53 Wochen).
+ */
+export const weekRhythm = pgEnum("week_rhythm", ["jede", "a", "b"]);
+
 export const timetableSlots = pgTable("timetable_slots", {
   id: uuid("id").primaryKey().defaultRandom(),
   weekday: integer("weekday").notNull(), // 1 = Montag … 5 = Freitag
+  rhythm: weekRhythm("rhythm").notNull().default("jede"),
   start: text("start").notNull(), // "07:45"
   end: text("end").notNull(),
   room: text("room"),

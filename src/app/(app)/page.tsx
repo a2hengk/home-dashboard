@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { addDays, diffDays, formatShort, todayISO, weekday, weekdayLong, dayMonth } from "@/lib/dates";
+import { addDays, diffDays, formatShort, todayISO, weekdayLong, dayMonth } from "@/lib/dates";
 import { eventMeta } from "@/lib/event-types";
 import { getSubjects, getToday } from "@/lib/data";
 import { requireUser } from "@/lib/session";
 import { Timeline } from "@/components/timeline";
+import { nextSchoolDay, slotsOn } from "@/lib/timetable";
 import { TodoList, TodoQuickAdd } from "@/components/todos";
 import { Empty, HudPanel, PageSkeleton, Reactor, Readout, SubjectTag } from "@/components/hud";
 
@@ -22,19 +23,11 @@ async function Heute() {
   const today = todayISO();
   const [{ todos, events, slots }, subjects] = await Promise.all([getToday(today), getSubjects()]);
 
-  const schoolDays = [...new Set(slots.map((s) => s.weekday))];
-  const todaySlots = slots.filter((s) => s.weekday === weekday(today));
-  let slotDay = today;
-  if (!todaySlots.length && schoolDays.length) {
-    for (let i = 1; i <= 7; i++) {
-      const d = addDays(today, i);
-      if (schoolDays.includes(weekday(d))) {
-        slotDay = d;
-        break;
-      }
-    }
-  }
-  const shownSlots = slots.filter((s) => s.weekday === weekday(slotDay));
+  // Schultage mit 2-Wochen-Rhythmus: erst heute, sonst der nächste Tag mit Unterricht
+  const todaySlots = slotsOn(slots, today);
+  const slotDay = todaySlots.length ? today : nextSchoolDay(slots, addDays(today, 1));
+  const shownSlots = slotDay ? slotsOn(slots, slotDay) : [];
+  const schoolDates = Array.from({ length: 14 }, (_, i) => addDays(today, i)).filter((d) => slotsOn(slots, d).length > 0);
 
   const due = todos.filter((t) => t.due && t.due <= today);
   const overdue = due.filter((t) => t.due! < today);
@@ -119,7 +112,7 @@ async function Heute() {
         </HudPanel>
 
         <div className="lg:col-span-2">
-          <Timeline today={today} events={events} schoolDays={schoolDays} />
+          <Timeline today={today} events={events} schoolDates={schoolDates} />
         </div>
 
         <HudPanel
@@ -139,7 +132,7 @@ async function Heute() {
         </HudPanel>
 
         <HudPanel
-          label={todaySlots.length ? "Stundenplan // heute" : schoolDays.length ? `Nächster Schultag // ${formatShort(slotDay)}` : "Stundenplan"}
+          label={todaySlots.length ? "Stundenplan // heute" : slotDay ? `Nächster Schultag // ${formatShort(slotDay)}` : "Stundenplan"}
           code="TT"
           id="timetable"
         >

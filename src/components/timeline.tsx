@@ -40,17 +40,17 @@ function Legend() {
 }
 
 /**
- * Zwei Wochen als HUD-Zeitleiste. Schultage = Wochentage mit Stunden im Stundenplan.
+ * Zwei Wochen als HUD-Zeitleiste. Schultage = Tage mit Unterricht laut Stundenplan (inkl. 2-Wochen-Rhythmus).
  * Tage mit wichtigem Termin leuchten in dessen Farbe.
  */
 export function Timeline({
   today,
   events,
-  schoolDays,
+  schoolDates,
 }: {
   today: string;
   events: EventItem[];
-  schoolDays: number[];
+  schoolDates: string[];
 }) {
   const days = Array.from({ length: DAYS }, (_, i) => addDays(today, i));
   const last = days.at(-1)!;
@@ -61,7 +61,7 @@ export function Timeline({
       <ol className="grid grid-cols-14 gap-px sm:gap-1">
         {days.map((iso, i) => {
           const wd = weekday(iso);
-          const school = schoolDays.includes(wd);
+          const school = schoolDates.includes(iso);
           const weekend = wd >= 6;
           const isToday = i === 0;
           const dayEvents = events.filter((e) => e.date === iso);

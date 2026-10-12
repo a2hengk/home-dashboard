@@ -124,5 +124,28 @@ export const documents = pgTable("documents", {
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const achievementKind = pgEnum("achievement_kind", ["geschafft", "gelernt"]);
+
+/**
+ * Eigene Erfolge für die Bubble-Übersicht. Erledigte Todos kommen automatisch dazu,
+ * hier landet alles, was kein Todo war (gelernt, Meilensteine, Projekte).
+ * gruppe = die große Blase, in der der Eintrag schwebt (z.b. "Lunair", "Next.js").
+ * gewicht 1..3 = Größe der Blase.
+ */
+export const achievements = pgTable(
+  "achievements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    kind: achievementKind("kind").notNull().default("geschafft"),
+    gruppe: text("gruppe").notNull(),
+    gewicht: integer("gewicht").notNull().default(2),
+    note: text("note"),
+    date: date("date", { mode: "string" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("achievements_date_idx").on(t.date)],
+);
+
 // Login-Tabellen von Better Auth (generiert mit `npx @better-auth/cli generate`)
 export * from "./auth-schema";

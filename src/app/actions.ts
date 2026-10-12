@@ -262,3 +262,31 @@ export async function deleteDocument(id: string) {
     await db.delete(t.documents).where(eq(t.documents.id, id));
   });
 }
+
+/* ---------- Erfolge ---------- */
+
+const achievementInput = z.object({
+  title: z.string().trim().min(1, "Was hast du geschafft?").max(160),
+  kind: z.enum(["geschafft", "gelernt"]).default("geschafft"),
+  gruppe: z.string().trim().min(1, "Gruppe fehlt").max(40),
+  gewicht: z.number().int().min(1).max(3).default(2),
+  note: z
+    .string()
+    .trim()
+    .max(1000)
+    .nullish()
+    .transform((v) => v || null),
+  date: isoDate,
+});
+
+export async function createAchievement(input: z.input<typeof achievementInput>) {
+  return run(async () => {
+    await db.insert(t.achievements).values(achievementInput.parse(input));
+  });
+}
+
+export async function deleteAchievement(id: string) {
+  return run(async () => {
+    await db.delete(t.achievements).where(eq(t.achievements.id, z.string().uuid().parse(id)));
+  });
+}

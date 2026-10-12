@@ -1,10 +1,10 @@
 import "server-only";
-import { asc, desc, eq, gte, isNull, and, sql } from "drizzle-orm";
+import { asc, desc, eq, gte, isNull, isNotNull, and, sql } from "drizzle-orm";
 import { db } from "@/db";
 import * as t from "@/db/schema";
 import { requireUser } from "./session";
 import { addDays } from "./dates";
-import type { Doc, EventItem, Folder, Grade, Slot, Subject, SubjectRef, Todo } from "./types";
+import type { Achievement, Doc, EventItem, Folder, Grade, Slot, Subject, SubjectRef, Todo } from "./types";
 
 // Jede Abfrage prüft selbst den Login. Seiten tun das auch, doppelt hält besser,
 // weil Layout und Seite parallel rendern.
@@ -180,6 +180,53 @@ export async function getDocs(subjectId?: string): Promise<Doc[]> {
     uploaded: berlinDate(r.uploadedAt),
     subject: ref(r),
   }));
+}
+
+const areaGroup = { privat: "Privat", arbeit: "Arbeit", schule: "Schule" } as const;
+
+/** Eigene Einträge plus erledigte Todos, alles was in die Blasen soll */
+export async function getAchievements(): Promise<Achievement[]> {
+  await requireUser();
+  const [own, done] = await Promise.all([
+    db.select().from(t.achievements).orderBy(desc(t.achievements.date)),
+    db
+      .select({
+        id: t.todos.id,
+        title: t.todos.title,
+        area: t.todos.area,
+        important: t.todos.important,
+        doneAt: t.todos.doneAt,
+        ...subjectJoinCols,
+      })
+      .from(t.todos)
+      .leftJoin(t.subjects, eq(t.todos.subjectId, t.subjects.id))
+      .where(isNotNull(t.todos.doneAt))
+      .orderBy(desc(t.todos.doneAt)),
+  ]);
+  return [
+    ...own.map((a): Achievement => ({
+      id: a.id,
+      source: "eintrag",
+      title: a.title,
+      kind: a.kind,
+      gruppe: a.gruppe,
+      gewicht: Math.min(3, Math.max(1, a.gewicht)) as 1 | 2 | 3,
+      note: a.note,
+      date: a.date,
+    })),
+    ...done.map((d): Achievement => ({
+      id: d.id,
+      source: "todo",
+      title: d.title,
+      kind: "geschafft",
+      // Schul-Todos landen beim Fach, der Rest beim Bereich
+      gruppe: d.sK ?? areaGroup[d.area],
+      gewicht: d.important ? 2 : 1,
+      note: null,
+      date: berlinDate(d.doneAt!),
+      color: d.sF ?? undefined,
+    })),
+  ];
 }
 
 /** Alles, was die Startseite braucht, in einem Rutsch */

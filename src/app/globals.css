@@ -156,6 +156,17 @@ textarea {
   color-scheme: dark;
 }
 
+/* Erfolge: Blasen schweben leicht */
+@keyframes bubble-float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(var(--fx, 0px), var(--fy, -4px)); }
+}
+.bubble-float {
+  animation: bubble-float var(--fd, 7s) ease-in-out infinite;
+  animation-delay: var(--fdelay, 0s);
+  transform-box: fill-box;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -4,14 +4,6 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 
 export const DOC_DRAG_TYPE = "application/x-dashboard-doc";
-export const NOTE_DRAG_TYPE = "application/x-dashboard-note";
-
-const contents = (files: number, notes: number) => {
-  const parts = [];
-  if (files) parts.push(`${files} ${files === 1 ? "Datei" : "Dateien"}`);
-  if (notes) parts.push(`${notes} ${notes === 1 ? "Notiz" : "Notizen"}`);
-  return parts.join(" · ") || "Leer";
-};
 
 /**
  * Ordner als Hologramm: Reiter + Rückwand als Drahtgitter, dazwischen leuchtende
@@ -20,25 +12,20 @@ const contents = (files: number, notes: number) => {
  */
 export function FolderTile({
   name,
-  count: files,
-  notes = 0,
+  count,
   color = "#5ce1ff",
   onOpen,
   onDropDoc,
-  onDropNote,
   onDropFiles,
 }: {
   name: string;
   count: number;
-  notes?: number;
-  onDropNote?: (noteId: string) => void;
   color?: string;
   onOpen: () => void;
   onDropDoc: (docId: string) => void;
   onDropFiles: (files: FileList) => void;
 }) {
   const [over, setOver] = useState(false);
-  const count = files + notes;
   const c = (a: number) => `color-mix(in srgb, ${color} ${a}%, transparent)`;
 
   return (
@@ -56,12 +43,10 @@ export function FolderTile({
         e.stopPropagation();
         setOver(false);
         const docId = e.dataTransfer.getData(DOC_DRAG_TYPE);
-        const noteId = e.dataTransfer.getData(NOTE_DRAG_TYPE);
         if (docId) onDropDoc(docId);
-        else if (noteId) onDropNote?.(noteId);
         else if (e.dataTransfer.files.length) onDropFiles(e.dataTransfer.files);
       }}
-      aria-label={`Ordner ${name}, ${contents(files, notes)}`}
+      aria-label={`Ordner ${name}, ${count} ${count === 1 ? "Datei" : "Dateien"}`}
       className="group relative block aspect-[5/4] w-full text-left [perspective:700px]"
       style={{ filter: over ? `drop-shadow(0 0 14px ${color})` : undefined }}
     >
@@ -91,7 +76,7 @@ export function FolderTile({
       >
         <span className="truncate font-display text-[15px] font-bold uppercase leading-tight tracking-wider text-ink">{name}</span>
         <span className="hud-label text-[9px]" style={{ color }}>
-          {over ? "Loslassen zum Ablegen" : contents(files, notes)}
+          {over ? "Loslassen zum Ablegen" : count === 0 ? "Leer" : `${count} ${count === 1 ? "Datei" : "Dateien"}`}
         </span>
       </span>
     </button>

@@ -1,28 +1,25 @@
 "use client";
 
-import { useId, useOptimistic, useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft, Pencil, Search, Trash2 } from "lucide-react";
-import { createFolder, deleteFolder, moveNote, renameFolder } from "@/app/actions";
-import { formatSize, type Doc, type Folder, type NoteMeta, type Subject } from "@/lib/types";
+import { createFolder, deleteFolder, renameFolder } from "@/app/actions";
+import { formatSize, type Doc, type Folder, type Subject } from "@/lib/types";
 import type { StorageMode } from "@/lib/upload";
 import { FolderGlyph, FolderTile, NewFolderTile } from "./folder";
 import { DocList, DropZone, Toast, useDocs, useToast, useUploader } from "./files";
 import { HudPanel, buttonClass, fieldClass } from "./hud";
-import { NewNoteButton, NoteList, useNewNote } from "./notes";
 
 const plural = (n: number) => `${n} ${n === 1 ? "Datei" : "Dateien"}`;
 
 export function AblageView({
   docs: initialDocs,
-  notes: initialNotes,
   folders,
   subjects,
   today,
   storage,
 }: {
   docs: Doc[];
-  notes: NoteMeta[];
   folders: Folder[];
   subjects: Subject[];
   today: string;
@@ -35,10 +32,6 @@ export function AblageView({
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
   const [, start] = useTransition();
   const searchId = useId();
-  const newNote = useNewNote(toast.show);
-  const [notes, moveNoteLocal] = useOptimistic(initialNotes, (state: NoteMeta[], op: { id: string; folderId: string | null }) =>
-    state.map((n) => (n.id === op.id ? { ...n, folderId: op.folderId } : n)),
-  );
 
   // Der offene Ordner steht in der URL (?ordner=…), damit Zurück und Links funktionieren
   const openId = useSearchParams().get("ordner");
@@ -49,12 +42,6 @@ export function AblageView({
   const move = (id: string, folderId: string | null) =>
     run({ kind: "move", id, folderId }, folderId ? `Liegt jetzt in ${folderName(folderId)}` : "Aus dem Ordner genommen");
   const remove = (id: string) => run({ kind: "delete", id }, "Datei gelöscht");
-  const moveN = (id: string, folderId: string | null) =>
-    start(async () => {
-      moveNoteLocal({ id, folderId });
-      const res = await moveNote(id, folderId);
-      toast.show("error" in res ? res.error : `Notiz liegt jetzt in ${folderName(folderId)}`);
-    });
 
   const q = query.trim().toLowerCase();
   const matches = (d: Doc) =>
@@ -62,25 +49,19 @@ export function AblageView({
     d.name.toLowerCase().includes(q) ||
     !!d.subject?.kuerzel.toLowerCase().includes(q) ||
     !!folderName(d.folderId)?.toLowerCase().includes(q);
-  const noteMatches = (n: NoteMeta) =>
-    !q ||
-    n.title.toLowerCase().includes(q) ||
-    n.excerpt.toLowerCase().includes(q) ||
-    !!n.subject?.kuerzel.toLowerCase().includes(q) ||
-    !!folderName(n.folderId)?.toLowerCase().includes(q);
 
   const searchBar = (
     <div className="mb-6 flex items-center gap-3 border border-line bg-panel px-4 backdrop-blur focus-within:border-hud">
       <Search size={16} className="shrink-0 text-hud-dim" aria-hidden />
       <label htmlFor={searchId} className="sr-only">
-        Dateien und Notizen durchsuchen
+        Dateien durchsuchen
       </label>
       <input
         id={searchId}
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={open ? `In ${open.name} suchen` : "Dateien und Notizen durchsuchen"}
+        placeholder={open ? `In ${open.name} suchen` : "Dateien durchsuchen"}
         className="min-w-0 flex-1 bg-transparent py-3 text-ink placeholder:text-faint focus:outline-none"
       />
     </div>
@@ -89,27 +70,14 @@ export function AblageView({
   /* ---------- Ein Ordner ist offen ---------- */
   if (open) {
     const inside = docs.filter((d) => d.folderId === open.id);
-    const insideNotes = notes.filter((n) => n.folderId === open.id);
     return (
       <>
         <button type="button" onClick={() => go(null)} className="hud-label mb-6 inline-flex items-center gap-1 text-[11px] text-hud-dim hover:text-hud">
           <ChevronLeft size={14} aria-hidden /> Ablage
         </button>
-        <FolderHeader folder={open} count={inside.length} notes={insideNotes.length} size={inside.reduce((s, d) => s + d.sizeBytes, 0)} onDeleted={() => go(null)} />
+        <FolderHeader folder={open} count={inside.length} size={inside.reduce((s, d) => s + d.sizeBytes, 0)} onDeleted={() => go(null)} />
         {searchBar}
-        <HudPanel
-          label="Notizen"
-          code={`TXT-${String(insideNotes.length).padStart(2, "0")}`}
-          className="mb-6"
-          action={<NewNoteButton pending={newNote.pending} onClick={() => newNote.create({ folderId: open.id, subjectId: open.subject?.id })} />}
-        >
-          <NoteList
-            notes={insideNotes.filter(noteMatches)}
-            today={today}
-            empty={q ? `Keine Notiz passt zu „${query}“.` : "Noch keine Notizen in diesem Ordner. Oben rechts eine anlegen."}
-          />
-        </HudPanel>
-        <HudPanel label="Dateien" code={`DIR-${String(inside.length).padStart(2, "0")}`}>
+        <HudPanel label="Inhalt" code={`DIR-${String(inside.length).padStart(2, "0")}`}>
           <DropZone
             disabled={!storage}
             uploads={uploads}
@@ -144,7 +112,7 @@ export function AblageView({
             ▸ Ordner <span className="text-faint">[{String(folders.length).padStart(2, "0")}]</span>
           </h2>
           <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-line-strong to-transparent" />
-          <span className="hud-label hidden text-[9px] text-faint sm:inline">Dateien und Notizen auf einen Ordner ziehen</span>
+          <span className="hud-label hidden text-[9px] text-faint sm:inline">Dateien auf einen Ordner ziehen zum Ablegen</span>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
           {folders.map((f) => (
@@ -152,11 +120,9 @@ export function AblageView({
               key={f.id}
               name={f.name}
               count={docs.filter((d) => d.folderId === f.id).length}
-              notes={notes.filter((n) => n.folderId === f.id).length}
               color={f.subject?.farbe}
               onOpen={() => go(f.id)}
               onDropDoc={(id) => move(id, f.id)}
-              onDropNote={(id) => moveN(id, f.id)}
               onDropFiles={(files) => uploadFiles(files, { folderId: f.id, subjectId: f.subject?.id })}
             />
           ))}
@@ -170,21 +136,6 @@ export function AblageView({
           />
         </div>
       </section>
-
-      <HudPanel
-        label="Notizen"
-        code={`TXT-${String(notes.length).padStart(2, "0")}`}
-        className="mb-6"
-        action={<NewNoteButton pending={newNote.pending} onClick={() => newNote.create()} />}
-      >
-        <NoteList
-          notes={notes.filter((n) => (!subjectFilter || n.subject?.id === subjectFilter) && noteMatches(n))}
-          folders={folders}
-          today={today}
-          showFolder
-          empty={q ? `Keine Notiz passt zu „${query}“.` : "Noch keine Notizen. Am besten direkt im passenden Ordner anlegen, dann liegt sie gleich richtig."}
-        />
-      </HudPanel>
 
       <HudPanel label="Alle Dateien" code={`DOC-${String(docs.length).padStart(2, "0")}`}>
         {withDocs.length ? (
@@ -228,7 +179,7 @@ function Chip({ active, onClick, color, children }: { active: boolean; onClick: 
   );
 }
 
-function FolderHeader({ folder, count, notes, size, onDeleted }: { folder: Folder; count: number; notes: number; size: number; onDeleted: () => void }) {
+function FolderHeader({ folder, count, size, onDeleted }: { folder: Folder; count: number; size: number; onDeleted: () => void }) {
   const [mode, setMode] = useState<"view" | "rename" | "confirm">("view");
   const [name, setName] = useState(folder.name);
   const [error, setError] = useState<string | null>(null);
@@ -291,7 +242,7 @@ function FolderHeader({ folder, count, notes, size, onDeleted }: { folder: Folde
       )}
       <p className="mt-2 text-muted">
         {plural(count)}
-        {count ? ` (${formatSize(size)})` : null}, {notes} {notes === 1 ? "Notiz" : "Notizen"}. {mode === "confirm" ? "Dateien und Notizen bleiben erhalten und landen wieder in der Übersicht." : "Alles hier taucht auch in der Übersicht auf."}
+        {count ? `, zusammen ${formatSize(size)}` : null}. {mode === "confirm" ? "Die Dateien bleiben erhalten und landen wieder in der Übersicht." : "Alles hier taucht auch in der Übersicht auf."}
       </p>
       {error ? <p role="alert" className="mt-2 text-[13px] text-alert">{error}</p> : null}
     </header>

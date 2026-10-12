@@ -85,17 +85,6 @@ export function formatSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
 }
 
-export type NoteMeta = {
-  id: string;
-  title: string;
-  folderId: string | null;
-  subject: SubjectRef | null;
-  updated: string; // YYYY-MM-DD
-  excerpt: string; // Anfang des Texts ohne Markdown-Zeichen, für Liste und Suche
-};
-
-export type Note = NoteMeta & { body: string };
-
 export type AchievementKind = "geschafft" | "gelernt";
 
 /** Eine Blase in der Erfolge-Ansicht: eigener Eintrag oder erledigtes Todo */

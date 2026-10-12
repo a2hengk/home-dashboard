@@ -4,7 +4,7 @@ import { db } from "@/db";
 import * as t from "@/db/schema";
 import { requireUser } from "./session";
 import { addDays } from "./dates";
-import type { Achievement, Doc, EventItem, Folder, Grade, Note, NoteMeta, Slot, Subject, SubjectRef, Todo } from "./types";
+import type { Achievement, Doc, EventItem, Folder, Grade, Slot, Subject, SubjectRef, Todo } from "./types";
 
 // Jede Abfrage prüft selbst den Login. Seiten tun das auch, doppelt hält besser,
 // weil Layout und Seite parallel rendern.
@@ -180,90 +180,6 @@ export async function getDocs(subjectId?: string): Promise<Doc[]> {
     uploaded: berlinDate(r.uploadedAt),
     subject: ref(r),
   }));
-}
-
-/** Markdown grob zu Klartext, reicht für Vorschau und Suche */
-function plain(md: string) {
-  return md
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/\[\[([^\]]+)\]\]/g, "$1")
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/[#>*_`~|-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-export async function getNotes(): Promise<NoteMeta[]> {
-  await requireUser();
-  const rows = await db
-    .select({
-      id: t.notes.id,
-      title: t.notes.title,
-      // Nur der Anfang, damit die Ablage nicht alle Texte komplett lädt
-      head: sql<string>`left(${t.notes.body}, 600)`,
-      folderId: t.notes.folderId,
-      updatedAt: t.notes.updatedAt,
-      ...subjectJoinCols,
-    })
-    .from(t.notes)
-    .leftJoin(t.subjects, eq(t.notes.subjectId, t.subjects.id))
-    .orderBy(desc(t.notes.updatedAt));
-  return rows.map((r) => ({
-    id: r.id,
-    title: r.title,
-    folderId: r.folderId,
-    subject: ref(r),
-    updated: berlinDate(r.updatedAt),
-    excerpt: plain(r.head).slice(0, 240),
-  }));
-}
-
-export async function getNote(id: string): Promise<Note | null> {
-  await requireUser();
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-  const rows = await db
-    .select({
-      id: t.notes.id,
-      title: t.notes.title,
-      body: t.notes.body,
-      folderId: t.notes.folderId,
-      updatedAt: t.notes.updatedAt,
-      ...subjectJoinCols,
-    })
-    .from(t.notes)
-    .leftJoin(t.subjects, eq(t.notes.subjectId, t.subjects.id))
-    .where(eq(t.notes.id, id))
-    .limit(1);
-  const r = rows[0];
-  if (!r) return null;
-  return {
-    id: r.id,
-    title: r.title,
-    body: r.body,
-    folderId: r.folderId,
-    subject: ref(r),
-    updated: berlinDate(r.updatedAt),
-    excerpt: plain(r.body).slice(0, 240),
-  };
-}
-
-/** Notizen, die per [[Titel]] auf diese Notiz zeigen (wie Backlinks in Obsidian) */
-export async function getBacklinks(note: { id: string; title: string }): Promise<{ id: string; title: string }[]> {
-  await requireUser();
-  // [[Titel]] oder [[Titel|Text]], Groß/klein egal
-  const esc = note.title.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = `\\[\\[\\s*${esc}\\s*(\\||\\]\\])`;
-  return db
-    .select({ id: t.notes.id, title: t.notes.title })
-    .from(t.notes)
-    .where(and(sql`${t.notes.body} ~* ${pattern}`, sql`${t.notes.id} <> ${note.id}`))
-    .orderBy(asc(t.notes.title));
-}
-
-/** Nur Titel, für [[Links]] zwischen Notizen */
-export async function getNoteTitles(): Promise<{ id: string; title: string }[]> {
-  await requireUser();
-  return db.select({ id: t.notes.id, title: t.notes.title }).from(t.notes).orderBy(asc(t.notes.title));
 }
 
 const areaGroup = { privat: "Privat", arbeit: "Arbeit", schule: "Schule" } as const;

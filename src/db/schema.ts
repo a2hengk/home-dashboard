@@ -124,24 +124,6 @@ export const documents = pgTable("documents", {
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/**
- * Notizen in Markdown. Liegen wie Dateien in einem Ordner (oder lose in der Ablage).
- * [[Titel]] verlinkt auf eine andere Notiz, so wie in Obsidian.
- */
-export const notes = pgTable(
-  "notes",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    title: text("title").notNull(),
-    body: text("body").notNull().default(""),
-    folderId: uuid("folder_id").references(() => folders.id, { onDelete: "set null" }),
-    subjectId: uuid("subject_id").references(() => subjects.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [index("notes_folder_idx").on(t.folderId)],
-);
-
 export const achievementKind = pgEnum("achievement_kind", ["geschafft", "gelernt"]);
 
 /**

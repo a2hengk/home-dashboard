@@ -1,19 +1,20 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
-import { BookOpenCheck, CheckCheck, Trash2, X } from "lucide-react";
+import { BookOpenCheck, CheckCheck, ChevronRight, Play, RotateCcw, Search, Trash2, X } from "lucide-react";
 import { createAchievement, deleteAchievement } from "@/app/actions";
 import { addDays, formatShort } from "@/lib/dates";
 import type { Achievement, AchievementKind } from "@/lib/types";
 import { Toast, useToast } from "./files";
-import { Empty, HudPanel, Readout, buttonClass, fieldClass, labelClass } from "./hud";
-import { MindMap, type MapGroup, type Selection } from "./mindmap";
+import { Empty, HudPanel, buttonClass, fieldClass, labelClass } from "./hud";
+import { GraphView, defaultSettings, type GraphGroup, type GraphSettings, type Selection } from "./graph";
 
 /* ---------- Farben ---------- */
 
 // Kühle HUD-Töne zuerst, dann wärmere, damit viele Gruppen unterscheidbar bleiben
 const palette = ["#5ce1ff", "#b39dff", "#4cf0a6", "#ffb547", "#ff8fc8", "#6ea8ff", "#ffd86b", "#7dd3c0", "#ff8f6b", "#c9e36b"];
-const fixed: Record<string, string> = { Privat: "#a6f1ff", Arbeit: "#ffb547", Schule: "#b39dff" };
+// Privat in Hellgrau wie die Standard-Knoten in Obsidian
+const fixed: Record<string, string> = { Privat: "#c3d3da", Arbeit: "#ffb547", Schule: "#b39dff" };
 
 /**
  * Jede Gruppe bekommt eine eigene Farbe: feste für die Bereiche, Fachfarbe für Schul-Todos,
@@ -43,6 +44,9 @@ export function AchievementsView({ items, today }: { items: Achievement[]; today
   const [kind, setKind] = useState<KindFilter>("alle");
   const [withTodos, setWithTodos] = useState(true);
   const [selection, setSelection] = useState<Selection>(null);
+  const [search, setSearch] = useState("");
+  const [settings, setSettings] = useGraphSettings();
+  const [replay, setReplay] = useState(0);
   const colorOf = useMemo(() => buildColors(items), [items]);
 
   const visible = useMemo(() => {
@@ -52,7 +56,7 @@ export function AchievementsView({ items, today }: { items: Achievement[]; today
     );
   }, [items, range, kind, withTodos, today]);
 
-  const groups = useMemo<MapGroup[]>(() => {
+  const groups = useMemo<GraphGroup[]>(() => {
     const map = new Map<string, Achievement[]>();
     for (const a of visible) map.set(a.gruppe, [...(map.get(a.gruppe) ?? []), a]);
     return [...map.entries()]
@@ -78,9 +82,9 @@ export function AchievementsView({ items, today }: { items: Achievement[]; today
       <div className="mb-5 lg:hidden">{title}</div>
       {/* Auf großen Bildschirmen die ganze Fläche neben der Navigation: Karte links, Einstellungen rechts */}
       <div className="lg:fixed lg:inset-y-0 lg:left-[88px] lg:right-0 lg:z-10 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-[minmax(0,1fr)]">
-        <section aria-label="Mindmap" className="relative aspect-square border border-line bg-[rgba(2,8,14,0.35)] lg:aspect-auto lg:h-full lg:border-0">
+        <section aria-label="Graph" className="relative aspect-square border border-line bg-[rgba(2,8,14,0.35)] lg:aspect-auto lg:h-full lg:border-0">
           {groups.length ? (
-            <MindMap groups={groups} total={visible.length} selection={selection} onSelect={setSelection} />
+            <GraphView groups={groups} selection={selection} onSelect={setSelection} settings={settings} search={search} replayKey={replay} />
           ) : (
             <div className="grid size-full place-items-center p-6">
               <Empty>Hier ist noch nichts. Trag ein, was du geschafft oder gelernt hast, oder hak ein paar Todos ab.</Empty>
@@ -88,25 +92,45 @@ export function AchievementsView({ items, today }: { items: Achievement[]; today
           )}
         </section>
 
-        <aside className="mt-6 flex flex-col gap-6 lg:mt-0 lg:h-full lg:overflow-y-auto lg:border-l lg:border-line lg:bg-[rgba(2,8,14,0.82)] lg:p-6 lg:backdrop-blur">
+        <aside className="mt-6 flex flex-col gap-5 lg:mt-0 lg:h-full lg:overflow-y-auto lg:border-l lg:border-line lg:bg-[rgba(2,8,14,0.82)] lg:p-6 lg:backdrop-blur">
           <div className="hidden lg:block">{title}</div>
 
-          <div className="space-y-2.5">
-            <Readout label="Erfolge" value={visible.length} tone="var(--color-hud-strong)" />
-            <Readout label="Davon gelernt" value={learned} />
-            <Readout label="Gruppen" value={groups.length} />
-            <Readout label="Diesen Monat" value={month} tone="var(--color-ok)" />
-          </div>
+          <dl className="grid grid-cols-4 gap-2 text-center">
+            {[
+              ["Erfolge", visible.length, "var(--color-hud-strong)"],
+              ["Gelernt", learned, "var(--color-ink)"],
+              ["Gruppen", groups.length, "var(--color-ink)"],
+              ["Monat", month, "var(--color-ok)"],
+            ].map(([label, value, tone]) => (
+              <div key={label as string} className="border border-line px-1 py-2">
+                <dd className="font-display text-[22px] font-bold leading-none" style={{ color: tone as string }}>{value}</dd>
+                <dt className="hud-label mt-1 text-[9px] text-faint">{label}</dt>
+              </div>
+            ))}
+          </dl>
 
-          <Filters range={range} setRange={setRange} kind={kind} setKind={setKind} withTodos={withTodos} setWithTodos={setWithTodos} />
+          <GraphControls
+            search={search}
+            setSearch={setSearch}
+            range={range}
+            setRange={setRange}
+            kind={kind}
+            setKind={setKind}
+            withTodos={withTodos}
+            setWithTodos={setWithTodos}
+            groups={groups}
+            selection={selection}
+            onSelect={setSelection}
+            settings={settings}
+            setSettings={setSettings}
+            onReplay={() => setReplay((n) => n + 1)}
+          />
 
           {leaf ? (
             <Detail item={leaf} color={colorOf(leaf.gruppe)} onClose={() => setSelection(null)} onMessage={toast.show} />
           ) : group ? (
             <GroupDetail group={group} onSelect={setSelection} onClose={() => setSelection(null)} />
-          ) : (
-            <p className="text-[13px] text-muted">Tipp auf eine Gruppe oder Blase für Details.</p>
-          )}
+          ) : null}
 
           <AddForm today={today} groups={allGroups} onMessage={toast.show} />
         </aside>
@@ -139,23 +163,156 @@ function Seg<T extends string>({ value, options, onChange, label }: { value: T; 
   );
 }
 
-function Filters(p: {
+/* ---------- Einstellungen wie in Obsidians Graph-Ansicht ---------- */
+
+const SETTINGS_KEY = "lunas-graph";
+
+/** Regler-Stellungen pro Browser merken (reine Bequemlichkeit, darf fehlschlagen) */
+function useGraphSettings() {
+  const [settings, setSettings] = useState<GraphSettings>(defaultSettings);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- einmalig nach dem Hydrieren
+      if (raw) setSettings({ ...defaultSettings, ...JSON.parse(raw) });
+    } catch {}
+  }, []);
+  const update = (next: GraphSettings) => {
+    setSettings(next);
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+    } catch {}
+  };
+  return [settings, update] as const;
+}
+
+function Section({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  return (
+    <details open={defaultOpen} className="group border-b border-line last:border-b-0">
+      <summary className="hud-label flex cursor-pointer list-none items-center gap-1.5 py-2.5 text-[11px] text-muted hover:text-hud [&::-webkit-details-marker]:hidden">
+        <ChevronRight size={13} aria-hidden className="transition-transform group-open:rotate-90" />
+        {title}
+      </summary>
+      <div className="space-y-3 pb-4">{children}</div>
+    </details>
+  );
+}
+
+function Slider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-3">
+      <label htmlFor={id} className="text-[13px] text-muted">{label}</label>
+      <input
+        id={id}
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="h-1 w-full cursor-pointer accent-[#5ce1ff]"
+      />
+    </div>
+  );
+}
+
+function GraphControls(p: {
+  search: string;
+  setSearch: (v: string) => void;
   range: Range;
   setRange: (r: Range) => void;
   kind: KindFilter;
   setKind: (k: KindFilter) => void;
   withTodos: boolean;
   setWithTodos: (v: boolean) => void;
+  groups: GraphGroup[];
+  selection: Selection;
+  onSelect: (s: Selection) => void;
+  settings: GraphSettings;
+  setSettings: (s: GraphSettings) => void;
+  onReplay: () => void;
 }) {
+  const st = p.settings;
+  const set = (patch: Partial<GraphSettings>) => p.setSettings({ ...st, ...patch });
+  const searchId = useId();
   return (
-    <section aria-label="Einstellungen" className="space-y-2.5 border-t border-line pt-5">
-      <h2 className="hud-label text-[11px] text-hud">▸ Einstellungen</h2>
-      <Seg label="Zeitraum" value={p.range} onChange={p.setRange} options={[["alles", "Alles"], ["jahr", "Jahr"], ["30", "30 Tage"]]} />
-      <Seg label="Art" value={p.kind} onChange={p.setKind} options={[["alle", "Alle"], ["geschafft", "Geschafft"], ["gelernt", "Gelernt"]]} />
-      <label className="hud-label flex cursor-pointer items-center gap-2 text-[10px] text-muted">
-        <input type="checkbox" checked={p.withTodos} onChange={(e) => p.setWithTodos(e.target.checked)} className="accent-[#5ce1ff]" />
-        Erledigte Todos zeigen
-      </label>
+    <section aria-label="Graph-Einstellungen" className="border border-line bg-[rgba(2,10,16,0.6)] px-4">
+      <Section title="Filter" defaultOpen>
+        <div className="flex items-center gap-2 border border-line bg-void/60 px-2.5 focus-within:border-hud">
+          <Search size={14} className="text-hud-dim" aria-hidden />
+          <label htmlFor={searchId} className="sr-only">Erfolge suchen</label>
+          <input
+            id={searchId}
+            type="search"
+            value={p.search}
+            onChange={(e) => p.setSearch(e.target.value)}
+            placeholder="Suchen…"
+            className="min-w-0 flex-1 bg-transparent py-1.5 text-[14px] text-ink placeholder:text-faint focus:outline-none"
+          />
+        </div>
+        <Seg label="Zeitraum" value={p.range} onChange={p.setRange} options={[["alles", "Alles"], ["jahr", "Jahr"], ["30", "30 Tage"]]} />
+        <Seg label="Art" value={p.kind} onChange={p.setKind} options={[["alle", "Alle"], ["geschafft", "Geschafft"], ["gelernt", "Gelernt"]]} />
+        <label className="flex cursor-pointer items-center justify-between gap-2 text-[13px] text-muted">
+          Erledigte Todos
+          <input type="checkbox" role="switch" checked={p.withTodos} onChange={(e) => p.setWithTodos(e.target.checked)} className="accent-[#5ce1ff]" />
+        </label>
+      </Section>
+
+      <Section title="Gruppen" defaultOpen>
+        <ul className="space-y-1">
+          {p.groups.map((g) => {
+            const on = p.selection?.type === "group" && p.selection.name === g.name;
+            return (
+              <li key={g.name}>
+                <button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => p.onSelect(on ? null : { type: "group", name: g.name })}
+                  className={`flex w-full items-center gap-2.5 px-1.5 py-1 text-left text-[14px] hover:bg-hud/5 ${on ? "bg-hud/10" : ""}`}
+                >
+                  <span aria-hidden className="size-2.5 rounded-full" style={{ background: g.color, boxShadow: `0 0 6px ${g.color}` }} />
+                  <span className="flex-1 truncate text-ink">{g.name}</span>
+                  <span className="font-display text-[12px] font-semibold text-faint">{g.items.length}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </Section>
+
+      <Section title="Anzeige">
+        <Slider label="Knotengröße" value={st.nodeSize} min={0.5} max={3} step={0.1} onChange={(v) => set({ nodeSize: v })} />
+        <Slider label="Liniendicke" value={st.linkWidth} min={0.3} max={3} step={0.1} onChange={(v) => set({ linkWidth: v })} />
+        <Slider label="Text ab Zoom" value={3.2 - st.labelZoom} min={0.2} max={3} step={0.1} onChange={(v) => set({ labelZoom: 3.2 - v })} />
+        <button type="button" onClick={p.onReplay} className={`${buttonClass("ghost")} w-full`}>
+          <Play size={13} aria-hidden /> Zeitraffer abspielen
+        </button>
+      </Section>
+
+      <Section title="Kräfte">
+        <Slider label="Mitte" value={st.center} min={0} max={1} step={0.01} onChange={(v) => set({ center: v })} />
+        <Slider label="Abstoßung" value={st.repel} min={0} max={20} step={0.5} onChange={(v) => set({ repel: v })} />
+        <Slider label="Linienkraft" value={st.linkForce} min={0} max={1} step={0.01} onChange={(v) => set({ linkForce: v })} />
+        <Slider label="Linienlänge" value={st.linkDistance} min={20} max={300} step={5} onChange={(v) => set({ linkDistance: v })} />
+        <button type="button" onClick={() => p.setSettings(defaultSettings)} className="hud-label inline-flex items-center gap-1.5 text-[10px] text-faint hover:text-hud">
+          <RotateCcw size={12} aria-hidden /> Standard wiederherstellen
+        </button>
+      </Section>
     </section>
   );
 }
@@ -344,7 +501,7 @@ function AddForm({ today, groups, onMessage }: { today: string; groups: string[]
 
 /* ---------- Gruppe ---------- */
 
-function GroupDetail({ group, onSelect, onClose }: { group: MapGroup; onSelect: (s: Selection) => void; onClose: () => void }) {
+function GroupDetail({ group, onSelect, onClose }: { group: GraphGroup; onSelect: (s: Selection) => void; onClose: () => void }) {
   const learned = group.items.filter((a) => a.kind === "gelernt").length;
   return (
     <HudPanel

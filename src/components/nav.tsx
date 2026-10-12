@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { House, ListChecks, CalendarDays, GraduationCap, FolderOpen, Power } from "lucide-react";
+import { House, ListChecks, CalendarDays, GraduationCap, FolderOpen, Power, Sparkles } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { Clock } from "./clock";
 
@@ -13,6 +13,7 @@ const items = [
   { href: "/termine", label: "Termine", icon: CalendarDays },
   { href: "/schule", label: "Schule", icon: GraduationCap },
   { href: "/ablage", label: "Ablage", icon: FolderOpen },
+  { href: "/erfolge", label: "Erfolge", icon: Sparkles },
 ] as const;
 
 function isActive(pathname: string | null, href: string) {
@@ -116,7 +117,7 @@ export function NavLinks({ pathname }: { pathname: string | null }) {
         aria-label="Hauptnavigation"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-[rgba(2,8,14,0.92)] pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
-        <ul className="grid grid-cols-5">
+        <ul className="grid grid-cols-6">
           {items.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (

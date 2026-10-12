@@ -156,6 +156,103 @@ textarea {
   color-scheme: dark;
 }
 
+/* Gerenderte Notizen (Markdown) */
+.note-md {
+  color: var(--color-ink);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.note-md > * + * {
+  margin-top: 0.85em;
+}
+.note-md h1,
+.note-md h2,
+.note-md h3,
+.note-md h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--color-hud-strong);
+  letter-spacing: 0.03em;
+  margin-top: 1.4em;
+}
+.note-md > :first-child {
+  margin-top: 0;
+}
+.note-md h1 { font-size: 30px; text-transform: uppercase; }
+.note-md h2 { font-size: 24px; border-bottom: 1px solid var(--color-line); padding-bottom: 0.2em; }
+.note-md h3 { font-size: 19px; color: var(--color-hud); }
+.note-md h4 { font-size: 16px; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.14em; }
+.note-md a {
+  color: var(--color-hud);
+  text-decoration: underline;
+  text-decoration-color: rgba(92, 225, 255, 0.4);
+  text-underline-offset: 4px;
+}
+.note-md a:hover { color: var(--color-hud-strong); }
+.note-md strong { color: var(--color-hud-strong); font-weight: 600; }
+.note-md em { color: var(--color-ink); }
+.note-md del { color: var(--color-faint); }
+.note-md ul,
+.note-md ol { padding-left: 1.4em; }
+.note-md ul { list-style: none; }
+.note-md ul > li { position: relative; }
+.note-md ul > li::before {
+  content: "";
+  position: absolute;
+  left: -1em;
+  top: 0.68em;
+  width: 5px;
+  height: 5px;
+  transform: rotate(45deg);
+  background: var(--color-hud);
+  box-shadow: 0 0 5px var(--color-hud);
+}
+.note-md ul.contains-task-list { padding-left: 0.2em; }
+.note-md li.task-list-item::before { display: none; }
+.note-md li.task-list-item input { accent-color: var(--color-hud); margin-right: 0.5em; }
+.note-md ol { list-style: decimal; }
+.note-md ol > li::marker { color: var(--color-hud); font-family: var(--font-display); font-weight: 700; }
+.note-md li + li { margin-top: 0.25em; }
+.note-md blockquote {
+  border-left: 2px solid var(--color-hud);
+  background: rgba(92, 225, 255, 0.05);
+  padding: 0.5em 1em;
+  color: var(--color-muted);
+}
+.note-md code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+  background: rgba(92, 225, 255, 0.08);
+  border: 1px solid var(--color-line);
+  padding: 0.1em 0.35em;
+  color: var(--color-hud-strong);
+}
+.note-md pre {
+  background: rgba(2, 10, 16, 0.85);
+  border: 1px solid var(--color-line);
+  padding: 0.9em 1em;
+  overflow-x: auto;
+}
+.note-md pre code { background: none; border: 0; padding: 0; color: var(--color-ink); }
+.note-md hr { border: 0; border-top: 1px dashed var(--color-line-strong); }
+.note-md table { width: 100%; border-collapse: collapse; font-size: 14px; display: block; overflow-x: auto; }
+.note-md th,
+.note-md td { border: 1px solid var(--color-line); padding: 0.35em 0.7em; text-align: left; }
+.note-md th { color: var(--color-hud); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.1em; }
+.note-md img { max-width: 100%; }
+
+/* Erfolge: Blasen schweben leicht */
+@keyframes bubble-float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(var(--fx, 0px), var(--fy, -4px)); }
+}
+.bubble-float {
+  animation: bubble-float var(--fd, 7s) ease-in-out infinite;
+  animation-delay: var(--fdelay, 0s);
+  transform-box: fill-box;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

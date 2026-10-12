@@ -21,7 +21,7 @@ const optionalId = z
   .nullish()
   .or(z.literal("").transform(() => null));
 
-async function run(fn: () => Promise<unknown>): Promise<Result> {
+async function run(fn: () => Promise<unknown>, opts: { refresh?: boolean } = {}): Promise<Result> {
   await requireUser();
   try {
     await fn();
@@ -30,7 +30,8 @@ async function run(fn: () => Promise<unknown>): Promise<Result> {
     console.error(e);
     return { error: "Speichern hat nicht geklappt. Ist die Datenbank verbunden?" };
   }
-  refresh();
+  // Beim automatischen Speichern im Editor nicht neu laden, sonst springt der Cursor
+  if (opts.refresh !== false) refresh();
   return { ok: true };
 }
 
@@ -260,5 +261,95 @@ export async function deleteDocument(id: string) {
     // Erst die Datei, dann der Eintrag. Ist die Datei schon weg, trotzdem aufräumen.
     await del(doc.pathname).catch((e) => console.warn("Blob löschen:", e));
     await db.delete(t.documents).where(eq(t.documents.id, id));
+  });
+}
+
+/* ---------- Notizen ---------- */
+
+const noteTitle = z.string().trim().min(1, "Titel fehlt").max(160);
+const uuidArg = z.string().uuid();
+
+const newNoteInput = z.object({
+  title: noteTitle.default("Neue Notiz"),
+  folderId: optionalId,
+  subjectId: optionalId,
+});
+
+/** Legt eine leere Notiz an und gibt ihre id zurück, damit der Editor direkt aufgehen kann */
+export async function createNote(input: z.input<typeof newNoteInput>): Promise<{ id: string } | { error: string }> {
+  let id = "";
+  const res = await run(async () => {
+    const v = newNoteInput.parse(input);
+    const [row] = await db
+      .insert(t.notes)
+      .values({ title: v.title, folderId: v.folderId ?? null, subjectId: v.subjectId ?? null })
+      .returning({ id: t.notes.id });
+    id = row.id;
+  });
+  return "error" in res ? res : { id };
+}
+
+const noteSave = z.object({
+  title: noteTitle,
+  body: z.string().max(200_000, "Notiz ist zu lang (max. 200.000 Zeichen)"),
+});
+
+export async function saveNote(id: string, input: z.input<typeof noteSave>) {
+  return run(
+    async () => {
+      const v = noteSave.parse(input);
+      await db
+        .update(t.notes)
+        .set({ ...v, updatedAt: new Date() })
+        .where(eq(t.notes.id, uuidArg.parse(id)));
+    },
+    { refresh: false },
+  );
+}
+
+export async function moveNote(id: string, folderId: string | null) {
+  return run(async () => {
+    await db
+      .update(t.notes)
+      .set({ folderId: optionalId.parse(folderId) ?? null })
+      .where(eq(t.notes.id, uuidArg.parse(id)));
+  });
+}
+
+export async function deleteNote(id: string) {
+  // Kein refresh: die Seite der Notiz gäbe es danach nicht mehr, der Editor navigiert selbst weg
+  return run(
+    async () => {
+      await db.delete(t.notes).where(eq(t.notes.id, uuidArg.parse(id)));
+    },
+    { refresh: false },
+  );
+}
+
+/* ---------- Erfolge ---------- */
+
+const achievementInput = z.object({
+  title: z.string().trim().min(1, "Was hast du geschafft?").max(160),
+  kind: z.enum(["geschafft", "gelernt"]).default("geschafft"),
+  gruppe: z.string().trim().min(1, "Gruppe fehlt").max(40),
+  gewicht: z.number().int().min(1).max(3).default(2),
+  note: z
+    .string()
+    .trim()
+    .max(1000)
+    .nullish()
+    .transform((v) => v || null),
+  date: isoDate,
+});
+
+export async function createAchievement(input: z.input<typeof achievementInput>) {
+  return run(async () => {
+    await db.insert(t.achievements).values(achievementInput.parse(input));
+  });
+}
+
+export async function deleteAchievement(id: string) {
+  return run(async () => {
+    await db.delete(t.achievements).where(eq(t.achievements.id, uuidArg.parse(id)));
   });
 }

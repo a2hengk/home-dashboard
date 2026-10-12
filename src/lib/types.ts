@@ -84,3 +84,29 @@ export function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
 }
+
+export type NoteMeta = {
+  id: string;
+  title: string;
+  folderId: string | null;
+  subject: SubjectRef | null;
+  updated: string; // YYYY-MM-DD
+  excerpt: string; // Anfang des Texts ohne Markdown-Zeichen, für Liste und Suche
+};
+
+export type Note = NoteMeta & { body: string };
+
+export type AchievementKind = "geschafft" | "gelernt";
+
+/** Eine Blase in der Erfolge-Ansicht: eigener Eintrag oder erledigtes Todo */
+export type Achievement = {
+  id: string;
+  source: "eintrag" | "todo";
+  title: string;
+  kind: AchievementKind;
+  gruppe: string;
+  gewicht: 1 | 2 | 3;
+  note: string | null;
+  date: string; // YYYY-MM-DD
+  color?: string; // Fachfarbe bei Schul-Todos
+};

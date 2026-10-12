@@ -12,6 +12,9 @@ import { GradeEditor } from "@/components/school";
 import { SubjectFiles } from "@/components/subject-files";
 import { TodoList, TodoQuickAdd } from "@/components/todos";
 import { HudPanel, PageSkeleton, Readout } from "@/components/hud";
+import { VaultNoteList } from "@/components/vault";
+import { getVault, meta } from "@/lib/vault";
+import { vaultHref } from "@/lib/vault-links";
 
 export default function LernfeldPage({ params }: PageProps<"/schule/[kuerzel]">) {
   return (
@@ -29,14 +32,24 @@ async function Lernfeld({ params }: { params: Promise<{ kuerzel: string }> }) {
   if (!subject) notFound();
 
   const today = todayISO();
-  const [todos, events, docs, grades, slots, subjects] = await Promise.all([
+  const [todos, events, docs, grades, slots, subjects, vault] = await Promise.all([
     getTodos({ subjectId: subject.id, openOnly: true }),
     getEvents({ subjectId: subject.id, from: today }),
     getDocs(subject.id),
     getGrades(subject.id),
     getTimetable(),
     getSubjects(),
+    getVault(),
   ]);
+  // Notizen aus dem Vault-Ordner Schule/<Kürzel>, Groß/klein egal
+  const vaultFolder = vault.status === "ok" ? [...vault.vault.folders.keys()].find((f) => f.toLowerCase() === `schule/${subject.kuerzel.toLowerCase()}`) : undefined;
+  const notes =
+    vault.status === "ok" && vaultFolder
+      ? [...vault.vault.notes.values()]
+          .filter((n) => n.folder === vaultFolder || n.folder.startsWith(`${vaultFolder}/`))
+          .sort((a, b) => (a.title === subject.kuerzel ? -1 : b.title === subject.kuerzel ? 1 : a.title.localeCompare(b.title, "de")))
+          .map(meta)
+      : [];
   const avg = average(grades);
   const exam = events.find((e) => e.type === "pruefung");
   const mySlots = slots.filter((s) => s.subject.id === subject.id);
@@ -72,6 +85,21 @@ async function Lernfeld({ params }: { params: Promise<{ kuerzel: string }> }) {
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="space-y-5">
+          {vault.status === "ok" ? (
+            <HudPanel
+              label="Notizen"
+              code={`MD-${String(notes.length).padStart(2, "0")}`}
+              action={
+                vaultFolder ? (
+                  <Link href={vaultHref(vaultFolder)} className="hud-label text-[10px] text-faint hover:text-hud">
+                    Ordner
+                  </Link>
+                ) : null
+              }
+            >
+              <VaultNoteList notes={notes} empty={`Noch keine Notizen. In Obsidian unter Schule/${subject.kuerzel} anlegen.`} />
+            </HudPanel>
+          ) : null}
           <HudPanel label="Dateien" code={`DOC-${String(docs.length).padStart(2, "0")}`}>
             <SubjectFiles docs={docs} subjectId={subject.id} kuerzel={subject.kuerzel} today={today} storage={storageMode()} />
           </HudPanel>

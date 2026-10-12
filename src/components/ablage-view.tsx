@@ -2,7 +2,10 @@
 
 import { useId, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronLeft, Pencil, Search, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, NotebookPen, Pencil, Search, Trash2 } from "lucide-react";
+import type { NoteMeta } from "@/lib/vault";
+import { vaultHref } from "@/lib/vault-links";
 import { createFolder, deleteFolder, renameFolder } from "@/app/actions";
 import { formatSize, type Doc, type Folder, type Subject } from "@/lib/types";
 import type { StorageMode } from "@/lib/upload";
@@ -18,7 +21,11 @@ export function AblageView({
   subjects,
   today,
   storage,
+  vaultNotes = [],
+  vaultSlot,
 }: {
+  vaultNotes?: NoteMeta[];
+  vaultSlot?: React.ReactNode;
   docs: Doc[];
   folders: Folder[];
   subjects: Subject[];
@@ -54,14 +61,14 @@ export function AblageView({
     <div className="mb-6 flex items-center gap-3 border border-line bg-panel px-4 backdrop-blur focus-within:border-hud">
       <Search size={16} className="shrink-0 text-hud-dim" aria-hidden />
       <label htmlFor={searchId} className="sr-only">
-        Dateien durchsuchen
+        Dateien und Notizen durchsuchen
       </label>
       <input
         id={searchId}
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={open ? `In ${open.name} suchen` : "Dateien durchsuchen"}
+        placeholder={open ? `In ${open.name} suchen` : "Dateien und Notizen durchsuchen"}
         className="min-w-0 flex-1 bg-transparent py-3 text-ink placeholder:text-faint focus:outline-none"
       />
     </div>
@@ -136,6 +143,8 @@ export function AblageView({
           />
         </div>
       </section>
+
+      {q ? <VaultHits notes={vaultNotes} q={q} /> : <div className="mb-8">{vaultSlot}</div>}
 
       <HudPanel label="Alle Dateien" code={`DOC-${String(docs.length).padStart(2, "0")}`}>
         {withDocs.length ? (
@@ -246,5 +255,31 @@ function FolderHeader({ folder, count, size, onDeleted }: { folder: Folder; coun
       </p>
       {error ? <p role="alert" className="mt-2 text-[13px] text-alert">{error}</p> : null}
     </header>
+  );
+}
+
+/** Treffer aus dem Obsidian-Vault bei der Suche */
+function VaultHits({ notes, q }: { notes: NoteMeta[]; q: string }) {
+  const hits = notes.filter((n) => n.title.toLowerCase().includes(q) || n.excerpt.toLowerCase().includes(q) || n.folder.toLowerCase().includes(q) || n.tags.some((t) => t.toLowerCase().includes(q)));
+  if (!hits.length) return null;
+  return (
+    <HudPanel label="Notizen aus Obsidian" code={`MD-${String(hits.length).padStart(2, "0")}`} className="mb-6">
+      <ul>
+        {hits.slice(0, 30).map((n) => (
+          <li key={n.path} className="border-b border-line/70 last:border-b-0">
+            <Link href={vaultHref(n.path)} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 py-2.5 hover:bg-hud/5">
+              <NotebookPen size={16} strokeWidth={1.5} className="mt-0.5 text-hud-dim" aria-hidden />
+              <span className="min-w-0">
+                <span className="block truncate text-ink">{n.title}</span>
+                <span className="block truncate text-[13px] text-muted">
+                  <span className="text-faint">{n.folder || "Vault"} · </span>
+                  {n.excerpt}
+                </span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </HudPanel>
   );
 }

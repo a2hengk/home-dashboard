@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/session";
 import { storageMode } from "@/lib/storage";
 import { formatSize } from "@/lib/types";
 import { AblageView } from "@/components/ablage-view";
-import { getVault, meta } from "@/lib/vault";
+import { getVault, matchFolder, meta, notesIn } from "@/lib/vault";
 import { obsidianHref } from "@/lib/vault-links";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
@@ -48,6 +48,17 @@ async function Ablage() {
         today={today}
         storage={storage}
         vaultNotes={vault.status === "ok" ? [...vault.vault.notes.values()].map(meta) : []}
+        vaultName={vault.status === "ok" ? vault.name : null}
+        vaultByFolder={
+          vault.status === "ok"
+            ? Object.fromEntries(
+                folders.flatMap((f) => {
+                  const path = matchFolder(vault.vault, [f.name, f.subject?.kuerzel, f.subject?.name.split(" - ")[0]]);
+                  return path ? [[f.id, { path, notes: notesIn(vault.vault, path) }]] : [];
+                }),
+              )
+            : {}
+        }
         vaultSlot={<VaultPanel state={vault} />}
       />
     </>

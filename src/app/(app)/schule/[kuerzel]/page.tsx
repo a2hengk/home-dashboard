@@ -13,7 +13,7 @@ import { SubjectFiles } from "@/components/subject-files";
 import { TodoList, TodoQuickAdd } from "@/components/todos";
 import { HudPanel, PageSkeleton, Readout } from "@/components/hud";
 import { VaultNoteList } from "@/components/vault";
-import { getVault, meta } from "@/lib/vault";
+import { getVault, matchFolder, notesIn } from "@/lib/vault";
 import { vaultHref } from "@/lib/vault-links";
 
 export default function LernfeldPage({ params }: PageProps<"/schule/[kuerzel]">) {
@@ -41,18 +41,9 @@ async function Lernfeld({ params }: { params: Promise<{ kuerzel: string }> }) {
     getSubjects(),
     getVault(),
   ]);
-  // Notizen aus dem Vault-Ordner Schule/<Kürzel> oder Schule/<Fachname>, Groß/klein egal.
-  // Fachname ohne Lehrerkürzel: "English - MAL" -> "English"
-  const folderNames = [subject.kuerzel, subject.name.split(" - ")[0]].map((n) => `schule/${n.trim().toLowerCase()}`);
-  const vaultFolder =
-    vault.status === "ok" ? [...vault.vault.folders.keys()].find((f) => folderNames.includes(f.toLowerCase())) : undefined;
-  const notes =
-    vault.status === "ok" && vaultFolder
-      ? [...vault.vault.notes.values()]
-          .filter((n) => n.folder === vaultFolder || n.folder.startsWith(`${vaultFolder}/`))
-          .sort((a, b) => (a.folder === vaultFolder && a.title === vaultFolder.split("/").at(-1) ? -1 : b.folder === vaultFolder && b.title === vaultFolder.split("/").at(-1) ? 1 : a.title.localeCompare(b.title, "de")))
-          .map(meta)
-      : [];
+  // Notizen aus dem Vault-Ordner mit Kürzel oder Fachname ("English - MAL" -> "English")
+  const vaultFolder = vault.status === "ok" ? matchFolder(vault.vault, [subject.kuerzel, subject.name.split(" - ")[0]]) : undefined;
+  const notes = vault.status === "ok" && vaultFolder ? notesIn(vault.vault, vaultFolder) : [];
   const avg = average(grades);
   const exam = events.find((e) => e.type === "pruefung");
   const mySlots = slots.filter((s) => s.subject.id === subject.id);

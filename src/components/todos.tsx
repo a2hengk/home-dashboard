@@ -1,16 +1,47 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { ChevronDown, X } from "lucide-react";
-import { createTodo, deleteTodo, setTodoDone } from "@/app/actions";
+import { ChevronDown, Pencil, X } from "lucide-react";
+import { createTodo, deleteTodo, setTodoDone, updateTodo } from "@/app/actions";
 import { diffDays, dueLabel } from "@/lib/dates";
 import type { Subject, Todo, TodoArea } from "@/lib/types";
 import { Empty, SubjectTag, buttonClass, fieldClass, fieldInlineClass } from "./hud";
 
-type Op = { kind: "toggle"; id: string; done: boolean } | { kind: "delete"; id: string };
+type TodoFields = { title: string; zuordnung: string; due: string; important: boolean };
+
+type Op =
+  | { kind: "toggle"; id: string; done: boolean }
+  | { kind: "delete"; id: string }
+  | { kind: "edit"; id: string; fields: TodoFields; subjects: Subject[] };
+
+/* Zuordnung im Formular: "" = privat, "schule"/"arbeit" = Bereich ohne Fach, sonst eine Fach-ID */
+function zuordnungOf(todo: Todo) {
+  return todo.subject?.id ?? (todo.area === "privat" ? "" : todo.area);
+}
+
+function toInput(f: TodoFields) {
+  const bereich = f.zuordnung === "schule" || f.zuordnung === "arbeit";
+  return {
+    title: f.title,
+    subjectId: bereich ? null : f.zuordnung || null,
+    area: (bereich ? f.zuordnung : "privat") as TodoArea,
+    due: f.due || null,
+    important: f.important,
+  };
+}
 
 function reduce(state: Todo[], op: Op): Todo[] {
   if (op.kind === "delete") return state.filter((t) => t.id !== op.id);
+  if (op.kind === "edit") {
+    const v = toInput(op.fields);
+    const s = op.subjects.find((x) => x.id === v.subjectId);
+    const subject = s ? { id: s.id, kuerzel: s.kuerzel, name: s.name, farbe: s.farbe } : null;
+    return state.map((t) =>
+      t.id === op.id
+        ? { ...t, title: v.title.trim(), area: subject ? "schule" : v.area, subject, due: v.due, important: v.important }
+        : t,
+    );
+  }
   return state.map((t) => (t.id === op.id ? { ...t, done: op.done } : t));
 }
 
@@ -22,7 +53,12 @@ function useTodos(todos: Todo[]) {
   const run = (op: Op) =>
     start(async () => {
       apply(op);
-      const res = op.kind === "delete" ? await deleteTodo(op.id) : await setTodoDone(op.id, op.done);
+      const res =
+        op.kind === "delete"
+          ? await deleteTodo(op.id)
+          : op.kind === "edit"
+            ? await updateTodo(op.id, toInput(op.fields))
+            : await setTodoDone(op.id, op.done);
       setError("error" in res ? res.error : null);
     });
   return { todos: optimistic, run, error };
@@ -33,17 +69,38 @@ function useTodos(todos: Todo[]) {
 export function TodoRow({
   todo,
   today,
+  subjects,
   onToggle,
   onDelete,
+  onEdit,
   showSubject = true,
 }: {
   todo: Todo;
   today: string;
+  subjects: Subject[];
   onToggle: () => void;
   onDelete: () => void;
+  onEdit: (fields: TodoFields) => void;
   showSubject?: boolean;
 }) {
+  const [editing, setEditing] = useState(false);
   const overdue = !todo.done && !!todo.due && diffDays(today, todo.due) < 0;
+
+  if (editing)
+    return (
+      <li className="border-b border-line/70 py-2.5 last:border-b-0">
+        <TodoEditForm
+          todo={todo}
+          subjects={subjects}
+          onCancel={() => setEditing(false)}
+          onSave={(fields) => {
+            setEditing(false);
+            onEdit(fields);
+          }}
+        />
+      </li>
+    );
+
   return (
     <li className="group flex items-center gap-3 border-b border-line/70 py-2.5 last:border-b-0">
       <button
@@ -60,14 +117,19 @@ export function TodoRow({
           }`}
         />
       </button>
-      <span className={`min-w-0 flex-1 leading-snug ${todo.done ? "text-faint line-through" : "text-ink"}`}>
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        title="Bearbeiten"
+        className={`min-w-0 flex-1 cursor-text text-left leading-snug ${todo.done ? "text-faint line-through" : "text-ink"}`}
+      >
         {todo.important && !todo.done ? (
           <span className="mr-1.5 font-display font-bold text-alert" aria-label="Wichtig">
             !
           </span>
         ) : null}
         {todo.title}
-      </span>
+      </button>
       {showSubject ? (
         todo.area === "arbeit" ? <span className="hud-label shrink-0 text-[10px] text-warn">Arbeit</span> : <SubjectTag subject={todo.subject} />
       ) : null}
@@ -76,6 +138,14 @@ export function TodoRow({
           {dueLabel(todo.due, today)}
         </span>
       ) : null}
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        aria-label={`${todo.title} bearbeiten`}
+        className="shrink-0 text-faint opacity-60 transition hover:text-hud group-hover:opacity-100 md:opacity-0"
+      >
+        <Pencil size={14} aria-hidden />
+      </button>
       <button
         type="button"
         onClick={onDelete}
@@ -88,16 +158,100 @@ export function TodoRow({
   );
 }
 
+/* ---------- Bearbeiten ---------- */
+
+function ZuordnungSelect({ value, onChange, subjects }: { value: string; onChange: (v: string) => void; subjects: Subject[] }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label="Zuordnung" className={`${fieldInlineClass} py-1.5 text-[13px]`}>
+      <option value="">Privat</option>
+      <option value="arbeit">Arbeit</option>
+      <option value="schule">Schule allgemein</option>
+      {subjects.map((s) => (
+        <option key={s.id} value={s.id}>
+          {s.kuerzel} {s.kuerzel.startsWith("LF") ? "" : s.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function TodoEditForm({
+  todo,
+  subjects,
+  onSave,
+  onCancel,
+}: {
+  todo: Todo;
+  subjects: Subject[];
+  onSave: (fields: TodoFields) => void;
+  onCancel: () => void;
+}) {
+  const [fields, setFields] = useState<TodoFields>({
+    title: todo.title,
+    zuordnung: zuordnungOf(todo),
+    due: todo.due ?? "",
+    important: todo.important,
+  });
+  const set = (patch: Partial<TodoFields>) => setFields((f) => ({ ...f, ...patch }));
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fields.title.trim()) return;
+    onSave(fields);
+  };
+
+  return (
+    <form onSubmit={submit} onKeyDown={(e) => e.key === "Escape" && onCancel()} className="space-y-2">
+      <label htmlFor={`todo-edit-${todo.id}`} className="sr-only">
+        Titel
+      </label>
+      <input
+        id={`todo-edit-${todo.id}`}
+        value={fields.title}
+        onChange={(e) => set({ title: e.target.value })}
+        maxLength={200}
+        autoFocus
+        autoComplete="off"
+        className={`${fieldClass} py-2`}
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <ZuordnungSelect value={fields.zuordnung} onChange={(zuordnung) => set({ zuordnung })} subjects={subjects} />
+        <input
+          type="date"
+          value={fields.due}
+          onChange={(e) => set({ due: e.target.value })}
+          aria-label="Fällig am"
+          className={`${fieldInlineClass} py-1.5 text-[13px]`}
+        />
+        <label className="hud-label flex cursor-pointer items-center gap-2 text-[10px] text-muted">
+          <input type="checkbox" checked={fields.important} onChange={(e) => set({ important: e.target.checked })} className="accent-[#ff6a3d]" />
+          Wichtig
+        </label>
+        <div className="ml-auto flex gap-2">
+          <button type="button" onClick={onCancel} className={`${buttonClass("ghost")} px-3 py-1.5`}>
+            Abbrechen
+          </button>
+          <button type="submit" disabled={!fields.title.trim()} className={`${buttonClass("primary")} px-3 py-1.5`}>
+            Speichern
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
 /* ---------- Einfache Liste (Startseite, Lernfeld) ---------- */
 
 export function TodoList({
   todos: initial,
   today,
+  subjects,
   showSubject = true,
   empty,
 }: {
   todos: Todo[];
   today: string;
+  subjects: Subject[];
   showSubject?: boolean;
   empty: React.ReactNode;
 }) {
@@ -111,9 +265,11 @@ export function TodoList({
             key={t.id}
             todo={t}
             today={today}
+            subjects={subjects}
             showSubject={showSubject}
             onToggle={() => run({ kind: "toggle", id: t.id, done: !t.done })}
             onDelete={() => run({ kind: "delete", id: t.id })}
+            onEdit={(fields) => run({ kind: "edit", id: t.id, fields, subjects })}
           />
         ))}
       </ul>
@@ -144,14 +300,7 @@ export function TodoQuickAdd({
     e.preventDefault();
     if (!title.trim()) return;
     start(async () => {
-      const res = await createTodo({
-        title,
-        // "" = privat, "schule"/"arbeit" = Bereich ohne Fach, sonst eine Fach-ID
-        subjectId: subject === "schule" || subject === "arbeit" ? null : subject || null,
-        area: subject === "schule" || subject === "arbeit" ? subject : "privat",
-        due: due || null,
-        important,
-      });
+      const res = await createTodo(toInput({ title, zuordnung: subject, due, important }));
       if ("error" in res) setError(res.error);
       else {
         setError(null);
@@ -180,18 +329,7 @@ export function TodoQuickAdd({
         </button>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {fixedSubjectId ? null : (
-          <select value={subject} onChange={(e) => setSubject(e.target.value)} aria-label="Zuordnung" className={`${fieldInlineClass} py-1.5 text-[13px]`}>
-            <option value="">Privat</option>
-            <option value="arbeit">Arbeit</option>
-            <option value="schule">Schule allgemein</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.kuerzel} {s.kuerzel.startsWith("LF") ? "" : s.name}
-              </option>
-            ))}
-          </select>
-        )}
+        {fixedSubjectId ? null : <ZuordnungSelect value={subject} onChange={setSubject} subjects={subjects} />}
         <input type="date" value={due} onChange={(e) => setDue(e.target.value)} aria-label="Fällig am" className={`${fieldInlineClass} py-1.5 text-[13px]`} />
         <label className="hud-label flex cursor-pointer items-center gap-2 text-[10px] text-muted">
           <input type="checkbox" checked={important} onChange={(e) => setImportant(e.target.checked)} className="accent-[#ff6a3d]" />
@@ -218,7 +356,7 @@ function groupOf(t: Todo, today: string) {
 }
 const order = ["Überfällig", "Heute", "Morgen", "Diese Woche", "Später", "Ohne Datum"];
 
-export function TodoBoard({ todos: initial, today }: { todos: Todo[]; today: string }) {
+export function TodoBoard({ todos: initial, today, subjects }: { todos: Todo[]; today: string; subjects: Subject[] }) {
   const { todos, run, error } = useTodos(initial);
   const [filter, setFilter] = useState<Filter>("alle");
 
@@ -234,8 +372,10 @@ export function TodoBoard({ todos: initial, today }: { todos: Todo[]; today: str
       key={t.id}
       todo={t}
       today={today}
+      subjects={subjects}
       onToggle={() => run({ kind: "toggle", id: t.id, done: !t.done })}
       onDelete={() => run({ kind: "delete", id: t.id })}
+      onEdit={(fields) => run({ kind: "edit", id: t.id, fields, subjects })}
     />
   );
 

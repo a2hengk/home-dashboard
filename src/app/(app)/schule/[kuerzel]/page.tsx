@@ -106,7 +106,7 @@ async function Lernfeld({ params }: { params: Promise<{ kuerzel: string }> }) {
         </div>
         <div className="space-y-5">
           <HudPanel label="Todos" code={`TD-${String(todos.length).padStart(2, "0")}`}>
-            <TodoList todos={todos} today={today} showSubject={false} empty="Nichts offen." />
+            <TodoList todos={todos} today={today} subjects={subjects} showSubject={false} empty="Nichts offen." />
             <div className="mt-5 border-t border-line pt-4">
               <TodoQuickAdd subjects={subjects} today={today} fixedSubjectId={subject.id} />
             </div>

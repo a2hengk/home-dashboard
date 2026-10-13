@@ -57,6 +57,22 @@ export async function createTodo(input: z.input<typeof todoInput>) {
   });
 }
 
+export async function updateTodo(id: string, input: z.input<typeof todoInput>) {
+  return run(async () => {
+    const v = todoInput.parse(input);
+    await db
+      .update(t.todos)
+      .set({
+        title: v.title,
+        subjectId: v.subjectId ?? null,
+        area: v.subjectId ? "schule" : v.area,
+        due: v.due ?? null,
+        important: v.important,
+      })
+      .where(eq(t.todos.id, z.string().uuid().parse(id)));
+  });
+}
+
 export async function setTodoDone(id: string, done: boolean) {
   return run(async () => {
     await db

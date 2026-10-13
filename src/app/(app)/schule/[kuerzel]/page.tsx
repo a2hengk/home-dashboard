@@ -41,13 +41,16 @@ async function Lernfeld({ params }: { params: Promise<{ kuerzel: string }> }) {
     getSubjects(),
     getVault(),
   ]);
-  // Notizen aus dem Vault-Ordner Schule/<Kürzel>, Groß/klein egal
-  const vaultFolder = vault.status === "ok" ? [...vault.vault.folders.keys()].find((f) => f.toLowerCase() === `schule/${subject.kuerzel.toLowerCase()}`) : undefined;
+  // Notizen aus dem Vault-Ordner Schule/<Kürzel> oder Schule/<Fachname>, Groß/klein egal.
+  // Fachname ohne Lehrerkürzel: "English - MAL" -> "English"
+  const folderNames = [subject.kuerzel, subject.name.split(" - ")[0]].map((n) => `schule/${n.trim().toLowerCase()}`);
+  const vaultFolder =
+    vault.status === "ok" ? [...vault.vault.folders.keys()].find((f) => folderNames.includes(f.toLowerCase())) : undefined;
   const notes =
     vault.status === "ok" && vaultFolder
       ? [...vault.vault.notes.values()]
           .filter((n) => n.folder === vaultFolder || n.folder.startsWith(`${vaultFolder}/`))
-          .sort((a, b) => (a.title === subject.kuerzel ? -1 : b.title === subject.kuerzel ? 1 : a.title.localeCompare(b.title, "de")))
+          .sort((a, b) => (a.folder === vaultFolder && a.title === vaultFolder.split("/").at(-1) ? -1 : b.folder === vaultFolder && b.title === vaultFolder.split("/").at(-1) ? 1 : a.title.localeCompare(b.title, "de")))
           .map(meta)
       : [];
   const avg = average(grades);
@@ -97,7 +100,7 @@ async function Lernfeld({ params }: { params: Promise<{ kuerzel: string }> }) {
                 ) : null
               }
             >
-              <VaultNoteList notes={notes} empty={`Noch keine Notizen. In Obsidian unter Schule/${subject.kuerzel} anlegen.`} />
+              <VaultNoteList notes={notes} empty={`Noch keine Notizen. In Obsidian unter ${vaultFolder ?? `Schule/${subject.kuerzel}`} anlegen.`} />
             </HudPanel>
           ) : null}
           <HudPanel label="Dateien" code={`DOC-${String(docs.length).padStart(2, "0")}`}>

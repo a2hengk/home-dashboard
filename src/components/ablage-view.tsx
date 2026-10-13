@@ -3,9 +3,10 @@
 import { useId, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, NotebookPen, Pencil, Search, Trash2 } from "lucide-react";
+import { ChevronLeft, ExternalLink, NotebookPen, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import type { NoteMeta } from "@/lib/vault";
-import { vaultHref } from "@/lib/vault-links";
+import { obsidianHref, vaultHref } from "@/lib/vault-links";
+import { VaultNoteList } from "./vault-lists";
 import { createFolder, deleteFolder, renameFolder } from "@/app/actions";
 import { formatSize, type Doc, type Folder, type Subject } from "@/lib/types";
 import type { StorageMode } from "@/lib/upload";
@@ -22,9 +23,14 @@ export function AblageView({
   today,
   storage,
   vaultNotes = [],
+  vaultName = null,
+  vaultByFolder = {},
   vaultSlot,
 }: {
   vaultNotes?: NoteMeta[];
+  vaultName?: string | null;
+  /** Ablage-Ordner-ID -> passender Vault-Ordner mit seinen Notizen */
+  vaultByFolder?: Record<string, { path: string; notes: NoteMeta[] }>;
   vaultSlot?: React.ReactNode;
   docs: Doc[];
   folders: Folder[];
@@ -84,7 +90,16 @@ export function AblageView({
         </button>
         <FolderHeader folder={open} count={inside.length} size={inside.reduce((s, d) => s + d.sizeBytes, 0)} onDeleted={() => go(null)} />
         {searchBar}
-        <HudPanel label="Inhalt" code={`DIR-${String(inside.length).padStart(2, "0")}`}>
+        {vaultName ? (
+          <VaultInFolder
+            vault={vaultName}
+            folderName={open.name}
+            match={vaultByFolder[open.id]}
+            notes={vaultByFolder[open.id]?.notes.filter((n) => !q || n.title.toLowerCase().includes(q) || n.excerpt.toLowerCase().includes(q)) ?? []}
+            q={q}
+          />
+        ) : null}
+        <HudPanel label="Dateien" code={`DIR-${String(inside.length).padStart(2, "0")}`}>
           <DropZone
             disabled={!storage}
             uploads={uploads}
@@ -127,6 +142,7 @@ export function AblageView({
               key={f.id}
               name={f.name}
               count={docs.filter((d) => d.folderId === f.id).length}
+              notes={vaultByFolder[f.id]?.notes.length ?? 0}
               color={f.subject?.farbe}
               onOpen={() => go(f.id)}
               onDropDoc={(id) => move(id, f.id)}
@@ -142,9 +158,10 @@ export function AblageView({
             }
           />
         </div>
+        {vaultSlot}
       </section>
 
-      {q ? <VaultHits notes={vaultNotes} q={q} /> : <div className="mb-8">{vaultSlot}</div>}
+      {q ? <VaultHits notes={vaultNotes} q={q} /> : null}
 
       <HudPanel label="Alle Dateien" code={`DOC-${String(docs.length).padStart(2, "0")}`}>
         {withDocs.length ? (
@@ -280,6 +297,63 @@ function VaultHits({ notes, q }: { notes: NoteMeta[]; q: string }) {
           </li>
         ))}
       </ul>
+    </HudPanel>
+  );
+}
+
+/** Notizen aus dem gleichnamigen Obsidian-Ordner, direkt im Ablage-Ordner */
+function VaultInFolder({
+  vault,
+  folderName,
+  match,
+  notes,
+  q,
+}: {
+  vault: string;
+  folderName: string;
+  match?: { path: string; notes: NoteMeta[] };
+  notes: NoteMeta[];
+  q: string;
+}) {
+  const btn =
+    "hud-label inline-flex items-center gap-1 text-[10px] text-faint hover:text-hud";
+  return (
+    <HudPanel
+      label="Notizen"
+      code={match ? `MD-${String(match.notes.length).padStart(2, "0")}` : undefined}
+      className="mb-6"
+      action={
+        match ? (
+          <span className="flex items-center gap-3">
+            <a
+              href={`obsidian://new?vault=${encodeURIComponent(vault)}&file=${encodeURIComponent(`${match.path}/Neue Notiz`)}`}
+              className={btn}
+              title="Neue Notiz in Obsidian anlegen"
+            >
+              <Plus size={12} aria-hidden /> Neu
+            </a>
+            <a href={obsidianHref(vault, match.path)} className={btn} title="Ordner in Obsidian öffnen">
+              <ExternalLink size={12} aria-hidden /> Obsidian
+            </a>
+          </span>
+        ) : null
+      }
+    >
+      {match ? (
+        <>
+          <VaultNoteList
+            notes={notes}
+            empty={q ? `Keine Notiz passt zu „${q}“.` : `Noch keine Notizen. Oben auf „Neu“ tippen, das legt sie in Obsidian unter ${match.path} an.`}
+          />
+          <p className="hud-label mt-3 text-[9px] text-faint">
+            Aus Obsidian: <Link href={vaultHref(match.path)} className="hover:text-hud">{match.path}</Link>
+          </p>
+        </>
+      ) : (
+        <p className="text-[13px] text-muted">
+          Kein passender Ordner im Vault. Leg in Obsidian einen Ordner <span className="text-ink">„{folderName}“</span> an, dann tauchen seine Notizen hier auf.
+        </p>
+      )}
     </HudPanel>
   );
 }

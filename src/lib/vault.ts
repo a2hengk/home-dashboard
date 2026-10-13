@@ -279,3 +279,27 @@ export function linkTable(v: Vault, body: string): Record<string, string> {
   }
   return out;
 }
+
+/**
+ * Vault-Ordner zu einem Ablage-Ordner: gleicher Name (z.b. "BFK0" -> "Schule/BFK0"),
+ * sonst Kürzel oder Name des verknüpften Fachs. Bei mehreren Treffern gewinnt der kürzeste Pfad.
+ */
+export function matchFolder(v: Vault, names: (string | null | undefined)[]): string | undefined {
+  const wanted = names.filter(Boolean).map((n) => n!.trim().toLowerCase());
+  return [...v.folders.values()]
+    .filter((f) => wanted.includes(f.name.toLowerCase()) || wanted.includes(f.path.toLowerCase()))
+    .sort((a, b) => a.path.length - b.path.length)[0]?.path;
+}
+
+/** Notizen in einem Vault-Ordner inkl. Unterordner, Ordner-Notiz (BFK0/BFK0.md) zuerst */
+export function notesIn(v: Vault, folder: string): NoteMeta[] {
+  const own = folder.split("/").at(-1);
+  return [...v.notes.values()]
+    .filter((n) => n.folder === folder || n.folder.startsWith(`${folder}/`))
+    .sort((a, b) => {
+      const ao = a.folder === folder && a.title === own;
+      const bo = b.folder === folder && b.title === own;
+      return ao ? -1 : bo ? 1 : a.title.localeCompare(b.title, "de", { numeric: true });
+    })
+    .map(meta);
+}

@@ -13,6 +13,7 @@ export const DOC_DRAG_TYPE = "application/x-dashboard-doc";
 export function FolderTile({
   name,
   count,
+  notes = 0,
   color = "#5ce1ff",
   onOpen,
   onDropDoc,
@@ -20,12 +21,15 @@ export function FolderTile({
 }: {
   name: string;
   count: number;
+  notes?: number;
   color?: string;
   onOpen: () => void;
   onDropDoc: (docId: string) => void;
   onDropFiles: (files: FileList) => void;
 }) {
   const [over, setOver] = useState(false);
+  const parts = [count ? `${count} ${count === 1 ? "Datei" : "Dateien"}` : "", notes ? `${notes} ${notes === 1 ? "Notiz" : "Notizen"}` : ""].filter(Boolean);
+  const contents = parts.join(" · ") || "Leer";
   const c = (a: number) => `color-mix(in srgb, ${color} ${a}%, transparent)`;
 
   return (
@@ -46,7 +50,7 @@ export function FolderTile({
         if (docId) onDropDoc(docId);
         else if (e.dataTransfer.files.length) onDropFiles(e.dataTransfer.files);
       }}
-      aria-label={`Ordner ${name}, ${count} ${count === 1 ? "Datei" : "Dateien"}`}
+      aria-label={`Ordner ${name}, ${contents}`}
       className="group relative block aspect-[5/4] w-full text-left [perspective:700px]"
       style={{ filter: over ? `drop-shadow(0 0 14px ${color})` : undefined }}
     >
@@ -59,10 +63,10 @@ export function FolderTile({
       {/* Rückwand */}
       <span aria-hidden className="absolute inset-x-0 bottom-0 top-3.5 transition-colors" style={{ background: c(over ? 16 : 8), boxShadow: `inset 0 0 0 1px ${c(40)}` }} />
       {/* Blätter als Lichtlinien */}
-      {count > 0 ? (
+      {count + notes > 0 ? (
         <>
           <span aria-hidden className="absolute left-[9%] right-[16%] top-[17%] h-1/3 -rotate-[2.5deg] transition-transform duration-200 group-hover:-translate-y-1" style={{ background: c(18), boxShadow: `inset 0 0 0 1px ${c(55)}` }} />
-          {count > 1 ? (
+          {count + notes > 1 ? (
             <span aria-hidden className="absolute left-[15%] right-[9%] top-[21%] h-1/3 rotate-[1.5deg] transition-transform duration-200 group-hover:-translate-y-0.5" style={{ background: c(26), boxShadow: `inset 0 0 0 1px ${c(70)}` }} />
           ) : null}
         </>
@@ -76,7 +80,7 @@ export function FolderTile({
       >
         <span className="truncate font-display text-[15px] font-bold uppercase leading-tight tracking-wider text-ink">{name}</span>
         <span className="hud-label text-[9px]" style={{ color }}>
-          {over ? "Loslassen zum Ablegen" : count === 0 ? "Leer" : `${count} ${count === 1 ? "Datei" : "Dateien"}`}
+          {over ? "Loslassen zum Ablegen" : contents}
         </span>
       </span>
     </button>

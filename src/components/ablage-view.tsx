@@ -158,9 +158,10 @@ export function AblageView({
             }
           />
         </div>
+        {vaultSlot}
       </section>
 
-      {q ? <VaultHits notes={vaultNotes} q={q} /> : <div className="mb-8">{vaultSlot}</div>}
+      {q ? <VaultHits notes={vaultNotes} q={q} /> : null}
 
       <HudPanel label="Alle Dateien" code={`DOC-${String(docs.length).padStart(2, "0")}`}>
         {withDocs.length ? (

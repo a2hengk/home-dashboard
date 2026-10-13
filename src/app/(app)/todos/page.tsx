@@ -33,7 +33,7 @@ async function Todos() {
         <TodoQuickAdd subjects={subjects} today={today} />
       </HudPanel>
       <HudPanel label="Aufgaben" code={`TD-${String(open.length).padStart(2, "0")}`}>
-        <TodoBoard todos={todos} today={today} />
+        <TodoBoard todos={todos} today={today} subjects={subjects} />
       </HudPanel>
     </div>
   );

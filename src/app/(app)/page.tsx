@@ -125,7 +125,7 @@ async function Heute() {
             </Link>
           }
         >
-          <TodoList todos={due} today={today} empty="Nichts fällig. Stark." />
+          <TodoList todos={due} today={today} subjects={subjects} empty="Nichts fällig. Stark." />
           <div className="mt-5 border-t border-line pt-4">
             <TodoQuickAdd subjects={subjects} today={today} />
           </div>

@@ -1,10 +1,10 @@
 import "server-only";
-import { asc, desc, eq, gte, isNull, isNotNull, and, sql } from "drizzle-orm";
+import { asc, desc, eq, gte, inArray, isNull, isNotNull, and, sql } from "drizzle-orm";
 import { db } from "@/db";
 import * as t from "@/db/schema";
 import { requireUser } from "./session";
 import { addDays } from "./dates";
-import type { Achievement, Doc, EventItem, Folder, Grade, Slot, Subject, SubjectRef, Todo } from "./types";
+import type { Achievement, Doc, EventItem, Folder, Grade, Slot, Subject, SubjectRef, Todo, TodoStep } from "./types";
 
 // Jede Abfrage prüft selbst den Login. Seiten tun das auch, doppelt hält besser,
 // weil Layout und Seite parallel rendern.
@@ -60,6 +60,22 @@ export async function getTodos(opts: { subjectId?: string; openOnly?: boolean } 
     .leftJoin(t.subjects, eq(t.todos.subjectId, t.subjects.id))
     .where(where.length ? and(...where) : undefined)
     .orderBy(sql`${t.todos.due} asc nulls last`, desc(t.todos.createdAt));
+
+  // Unterpunkte in einer zweiten Abfrage, dann pro Todo einsortieren
+  const steps = new Map<string, TodoStep[]>();
+  if (rows.length) {
+    const stepRows = await db
+      .select({ id: t.todoSteps.id, todoId: t.todoSteps.todoId, title: t.todoSteps.title, doneAt: t.todoSteps.doneAt })
+      .from(t.todoSteps)
+      .where(inArray(t.todoSteps.todoId, rows.map((r) => r.id)))
+      .orderBy(asc(t.todoSteps.createdAt));
+    for (const s of stepRows) {
+      const list = steps.get(s.todoId) ?? [];
+      list.push({ id: s.id, title: s.title, done: !!s.doneAt });
+      steps.set(s.todoId, list);
+    }
+  }
+
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
@@ -68,6 +84,7 @@ export async function getTodos(opts: { subjectId?: string; openOnly?: boolean } 
     important: r.important,
     done: !!r.doneAt,
     subject: ref(r),
+    steps: steps.get(r.id) ?? [],
   }));
 }
 

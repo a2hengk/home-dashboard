@@ -43,6 +43,13 @@
       "when": 1791808040211,
       "tag": "0005_achievements",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791961918347,
+      "tag": "0006_todo_steps",
+      "breakpoints": true
     }
   ]
 }

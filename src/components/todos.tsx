@@ -1,10 +1,10 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { ChevronDown, Pencil, X } from "lucide-react";
-import { createTodo, deleteTodo, setTodoDone, updateTodo } from "@/app/actions";
+import { ChevronDown, ListPlus, Pencil, Plus, X } from "lucide-react";
+import { addTodoStep, createTodo, deleteTodo, deleteTodoStep, setTodoDone, setTodoStepDone, updateTodo } from "@/app/actions";
 import { diffDays, dueLabel } from "@/lib/dates";
-import type { Subject, Todo, TodoArea } from "@/lib/types";
+import type { Subject, Todo, TodoArea, TodoStep } from "@/lib/types";
 import { Empty, SubjectTag, buttonClass, fieldClass, fieldInlineClass } from "./hud";
 
 type TodoFields = { title: string; zuordnung: string; due: string; important: boolean };
@@ -12,7 +12,14 @@ type TodoFields = { title: string; zuordnung: string; due: string; important: bo
 type Op =
   | { kind: "toggle"; id: string; done: boolean }
   | { kind: "delete"; id: string }
-  | { kind: "edit"; id: string; fields: TodoFields; subjects: Subject[] };
+  | { kind: "edit"; id: string; fields: TodoFields; subjects: Subject[] }
+  | StepOp;
+
+/** Änderungen an Unterpunkten, todoId zeigt auf das Todo, in dem der Punkt hängt */
+type StepOp =
+  | { kind: "step-add"; todoId: string; tempId: string; title: string }
+  | { kind: "step-toggle"; todoId: string; id: string; done: boolean }
+  | { kind: "step-delete"; todoId: string; id: string };
 
 /* Zuordnung im Formular: "" = privat, "schule"/"arbeit" = Bereich ohne Fach, sonst eine Fach-ID */
 function zuordnungOf(todo: Todo) {
@@ -30,7 +37,17 @@ function toInput(f: TodoFields) {
   };
 }
 
+function reduceSteps(todo: Todo, op: StepOp): Todo {
+  if (op.kind === "step-add") return { ...todo, steps: [...todo.steps, { id: op.tempId, title: op.title.trim(), done: false }] };
+  if (op.kind === "step-delete") return { ...todo, steps: todo.steps.filter((s) => s.id !== op.id) };
+  return { ...todo, steps: todo.steps.map((s) => (s.id === op.id ? { ...s, done: op.done } : s)) };
+}
+
 function reduce(state: Todo[], op: Op): Todo[] {
+  if (op.kind.startsWith("step-")) {
+    const stepOp = op as StepOp;
+    return state.map((t) => (t.id === stepOp.todoId ? reduceSteps(t, stepOp) : t));
+  }
   if (op.kind === "delete") return state.filter((t) => t.id !== op.id);
   if (op.kind === "edit") {
     const v = toInput(op.fields);
@@ -42,7 +59,25 @@ function reduce(state: Todo[], op: Op): Todo[] {
         : t,
     );
   }
-  return state.map((t) => (t.id === op.id ? { ...t, done: op.done } : t));
+  if (op.kind === "toggle") return state.map((t) => (t.id === op.id ? { ...t, done: op.done } : t));
+  return state;
+}
+
+function send(op: Op) {
+  switch (op.kind) {
+    case "delete":
+      return deleteTodo(op.id);
+    case "edit":
+      return updateTodo(op.id, toInput(op.fields));
+    case "toggle":
+      return setTodoDone(op.id, op.done);
+    case "step-add":
+      return addTodoStep(op.todoId, op.title);
+    case "step-toggle":
+      return setTodoStepDone(op.id, op.done);
+    case "step-delete":
+      return deleteTodoStep(op.id);
+  }
 }
 
 /** Gemeinsamer Zustand: Server-Daten + sofort sichtbare Änderungen bis zur Bestätigung */
@@ -53,12 +88,7 @@ function useTodos(todos: Todo[]) {
   const run = (op: Op) =>
     start(async () => {
       apply(op);
-      const res =
-        op.kind === "delete"
-          ? await deleteTodo(op.id)
-          : op.kind === "edit"
-            ? await updateTodo(op.id, toInput(op.fields))
-            : await setTodoDone(op.id, op.done);
+      const res = await send(op);
       setError("error" in res ? res.error : null);
     });
   return { todos: optimistic, run, error };
@@ -73,6 +103,7 @@ export function TodoRow({
   onToggle,
   onDelete,
   onEdit,
+  onStep,
   showSubject = true,
 }: {
   todo: Todo;
@@ -81,10 +112,13 @@ export function TodoRow({
   onToggle: () => void;
   onDelete: () => void;
   onEdit: (fields: TodoFields) => void;
+  onStep: (op: StepOp) => void;
   showSubject?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
+  const [adding, setAdding] = useState(false);
   const overdue = !todo.done && !!todo.due && diffDays(today, todo.due) < 0;
+  const stepsDone = todo.steps.filter((s) => s.done).length;
 
   if (editing)
     return (
@@ -102,59 +136,178 @@ export function TodoRow({
     );
 
   return (
-    <li className="group flex items-center gap-3 border-b border-line/70 py-2.5 last:border-b-0">
+    <li className="border-b border-line/70 py-2.5 last:border-b-0">
+      <div className="group flex items-center gap-3">
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={todo.done}
+          aria-label={todo.done ? `${todo.title} wieder öffnen` : `${todo.title} erledigen`}
+          onClick={onToggle}
+          className="grid size-5 shrink-0 place-items-center"
+        >
+          <span
+            className={`size-3 rotate-45 border transition-all ${
+              todo.done ? "border-ok bg-ok shadow-[0_0_8px_#4cf0a6]" : "border-hud-dim group-hover:border-hud"
+            }`}
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          title="Bearbeiten"
+          className={`min-w-0 flex-1 cursor-text text-left leading-snug ${todo.done ? "text-faint line-through" : "text-ink"}`}
+        >
+          {todo.important && !todo.done ? (
+            <span className="mr-1.5 font-display font-bold text-alert" aria-label="Wichtig">
+              !
+            </span>
+          ) : null}
+          {todo.title}
+          {todo.steps.length ? (
+            <span
+              className={`ml-2 font-display text-[12px] font-semibold tracking-wide ${
+                stepsDone === todo.steps.length ? "text-ok" : "text-faint"
+              }`}
+              aria-label={`${stepsDone} von ${todo.steps.length} Unterpunkten erledigt`}
+            >
+              {stepsDone}/{todo.steps.length}
+            </span>
+          ) : null}
+        </button>
+        {showSubject ? (
+          todo.area === "arbeit" ? <span className="hud-label shrink-0 text-[10px] text-warn">Arbeit</span> : <SubjectTag subject={todo.subject} />
+        ) : null}
+        {todo.due ? (
+          <span className={`w-16 shrink-0 text-right font-display text-[13px] font-semibold tracking-wide ${overdue ? "text-alert glow-alert" : "text-muted"}`}>
+            {dueLabel(todo.due, today)}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          aria-label={`Unterpunkt zu ${todo.title} hinzufügen`}
+          title="Unterpunkt hinzufügen"
+          className="shrink-0 text-faint opacity-60 transition hover:text-hud group-hover:opacity-100 md:opacity-0"
+        >
+          <ListPlus size={15} aria-hidden />
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          aria-label={`${todo.title} bearbeiten`}
+          className="shrink-0 text-faint opacity-60 transition hover:text-hud group-hover:opacity-100 md:opacity-0"
+        >
+          <Pencil size={14} aria-hidden />
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={`${todo.title} löschen`}
+          className="shrink-0 text-faint opacity-60 transition hover:text-alert group-hover:opacity-100 md:opacity-0"
+        >
+          <X size={15} aria-hidden />
+        </button>
+      </div>
+
+      {todo.steps.length || adding ? (
+        <ul className={`mt-1.5 ml-[9px] space-y-0.5 border-l border-line/70 pl-5 ${todo.done ? "opacity-60" : ""}`}>
+          {todo.steps.map((s) => (
+            <StepRow
+              key={s.id}
+              step={s}
+              onToggle={() => onStep({ kind: "step-toggle", todoId: todo.id, id: s.id, done: !s.done })}
+              onDelete={() => onStep({ kind: "step-delete", todoId: todo.id, id: s.id })}
+            />
+          ))}
+          <li>
+            {adding ? (
+              <StepAddForm
+                onCancel={() => setAdding(false)}
+                onAdd={(title) => onStep({ kind: "step-add", todoId: todo.id, tempId: `tmp-${crypto.randomUUID()}`, title })}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                className="hud-label flex items-center gap-1.5 py-1 text-[10px] text-faint transition hover:text-hud"
+              >
+                <Plus size={12} aria-hidden /> Unterpunkt
+              </button>
+            )}
+          </li>
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
+/* ---------- Unterpunkte ---------- */
+
+function StepRow({ step, onToggle, onDelete }: { step: TodoStep; onToggle: () => void; onDelete: () => void }) {
+  // Noch nicht gespeicherte Punkte haben nur eine vorläufige ID, die kann der Server nicht kennen
+  const pending = step.id.startsWith("tmp-");
+  return (
+    <li className="group/step flex items-center gap-2.5 py-0.5">
       <button
         type="button"
         role="checkbox"
-        aria-checked={todo.done}
-        aria-label={todo.done ? `${todo.title} wieder öffnen` : `${todo.title} erledigen`}
+        aria-checked={step.done}
+        aria-label={step.done ? `${step.title} wieder öffnen` : `${step.title} erledigen`}
         onClick={onToggle}
-        className="grid size-5 shrink-0 place-items-center"
+        disabled={pending}
+        className="grid size-4 shrink-0 place-items-center disabled:opacity-50"
       >
         <span
-          className={`size-3 rotate-45 border transition-all ${
-            todo.done ? "border-ok bg-ok shadow-[0_0_8px_#4cf0a6]" : "border-hud-dim group-hover:border-hud"
+          className={`size-2 rotate-45 border transition-all ${
+            step.done ? "border-ok bg-ok" : "border-hud-dim group-hover/step:border-hud"
           }`}
         />
       </button>
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        title="Bearbeiten"
-        className={`min-w-0 flex-1 cursor-text text-left leading-snug ${todo.done ? "text-faint line-through" : "text-ink"}`}
-      >
-        {todo.important && !todo.done ? (
-          <span className="mr-1.5 font-display font-bold text-alert" aria-label="Wichtig">
-            !
-          </span>
-        ) : null}
-        {todo.title}
-      </button>
-      {showSubject ? (
-        todo.area === "arbeit" ? <span className="hud-label shrink-0 text-[10px] text-warn">Arbeit</span> : <SubjectTag subject={todo.subject} />
-      ) : null}
-      {todo.due ? (
-        <span className={`w-16 shrink-0 text-right font-display text-[13px] font-semibold tracking-wide ${overdue ? "text-alert glow-alert" : "text-muted"}`}>
-          {dueLabel(todo.due, today)}
-        </span>
-      ) : null}
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        aria-label={`${todo.title} bearbeiten`}
-        className="shrink-0 text-faint opacity-60 transition hover:text-hud group-hover:opacity-100 md:opacity-0"
-      >
-        <Pencil size={14} aria-hidden />
-      </button>
+      <span className={`min-w-0 flex-1 text-[14px] leading-snug ${step.done ? "text-faint line-through" : "text-muted"}`}>{step.title}</span>
       <button
         type="button"
         onClick={onDelete}
-        aria-label={`${todo.title} löschen`}
-        className="shrink-0 text-faint opacity-60 transition hover:text-alert group-hover:opacity-100 md:opacity-0"
+        disabled={pending}
+        aria-label={`${step.title} löschen`}
+        className="shrink-0 text-faint opacity-60 transition hover:text-alert group-hover/step:opacity-100 disabled:hidden md:opacity-0"
       >
-        <X size={15} aria-hidden />
+        <X size={13} aria-hidden />
       </button>
     </li>
+  );
+}
+
+/** Bleibt nach Enter offen, damit man mehrere Punkte am Stück eintippen kann */
+function StepAddForm({ onAdd, onCancel }: { onAdd: (title: string) => void; onCancel: () => void }) {
+  const [title, setTitle] = useState("");
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!title.trim()) return;
+        onAdd(title);
+        setTitle("");
+      }}
+      className="flex items-center gap-2 py-1"
+    >
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => e.key === "Escape" && onCancel()}
+        onBlur={() => !title.trim() && onCancel()}
+        placeholder="Unterpunkt, Enter speichert"
+        aria-label="Neuer Unterpunkt"
+        maxLength={200}
+        autoFocus
+        autoComplete="off"
+        className={`${fieldInlineClass} flex-1 py-1 text-[13px]`}
+      />
+      <button type="submit" disabled={!title.trim()} className={`${buttonClass("ghost")} px-2.5 py-1`}>
+        <Plus size={13} aria-hidden />
+        <span className="sr-only">Hinzufügen</span>
+      </button>
+    </form>
   );
 }
 
@@ -270,6 +423,7 @@ export function TodoList({
             onToggle={() => run({ kind: "toggle", id: t.id, done: !t.done })}
             onDelete={() => run({ kind: "delete", id: t.id })}
             onEdit={(fields) => run({ kind: "edit", id: t.id, fields, subjects })}
+            onStep={run}
           />
         ))}
       </ul>
@@ -376,6 +530,7 @@ export function TodoBoard({ todos: initial, today, subjects }: { todos: Todo[]; 
       onToggle={() => run({ kind: "toggle", id: t.id, done: !t.done })}
       onDelete={() => run({ kind: "delete", id: t.id })}
       onEdit={(fields) => run({ kind: "edit", id: t.id, fields, subjects })}
+      onStep={run}
     />
   );
 

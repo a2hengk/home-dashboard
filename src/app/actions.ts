@@ -88,6 +88,31 @@ export async function deleteTodo(id: string) {
   });
 }
 
+/* ---------- Unterpunkte ---------- */
+
+const stepTitle = z.string().trim().min(1, "Unterpunkt ist leer").max(200);
+
+export async function addTodoStep(todoId: string, title: string) {
+  return run(async () => {
+    await db.insert(t.todoSteps).values({ todoId: z.string().uuid().parse(todoId), title: stepTitle.parse(title) });
+  });
+}
+
+export async function setTodoStepDone(id: string, done: boolean) {
+  return run(async () => {
+    await db
+      .update(t.todoSteps)
+      .set({ doneAt: done ? new Date() : null })
+      .where(eq(t.todoSteps.id, z.string().uuid().parse(id)));
+  });
+}
+
+export async function deleteTodoStep(id: string) {
+  return run(async () => {
+    await db.delete(t.todoSteps).where(eq(t.todoSteps.id, z.string().uuid().parse(id)));
+  });
+}
+
 /* ---------- Termine ---------- */
 
 const eventInput = z.object({

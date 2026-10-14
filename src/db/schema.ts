@@ -40,6 +40,21 @@ export const todos = pgTable(
   (t) => [index("todos_due_idx").on(t.due)],
 );
 
+/** Unterpunkte eines Todos, eine einfache Checkliste. Gehen mit dem Todo zusammen weg. */
+export const todoSteps = pgTable(
+  "todo_steps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    todoId: uuid("todo_id")
+      .notNull()
+      .references(() => todos.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("todo_steps_todo_idx").on(t.todoId)],
+);
+
 export const eventType = pgEnum("event_type", ["pruefung", "abgabe", "privat"]);
 
 export const events = pgTable(

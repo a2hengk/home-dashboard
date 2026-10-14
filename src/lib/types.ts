@@ -14,7 +14,10 @@ export type Todo = {
   due: string | null; // YYYY-MM-DD
   important: boolean;
   done: boolean;
+  steps: TodoStep[];
 };
+
+export type TodoStep = { id: string; title: string; done: boolean };
 
 export type EventType = "pruefung" | "abgabe" | "privat";
 

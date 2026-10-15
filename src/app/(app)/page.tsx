@@ -9,7 +9,8 @@ import { nextSchoolDay, slotsOn } from "@/lib/timetable";
 import { TodoList, TodoQuickAdd } from "@/components/todos";
 import { ReadAloudButton } from "@/components/speech";
 import { AutoRefresh } from "@/components/auto-refresh";
-import { buildBrief } from "@/lib/brief";
+import { buildBrief, buildGreeting } from "@/lib/brief";
+import { Greeting } from "@/components/greeting";
 import type { Brief } from "@/lib/types";
 
 const timeFmt = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" });
@@ -24,7 +25,13 @@ function BriefBlock({ title, brief }: { title: string; brief: Brief }) {
         </h3>
         <ReadAloudButton text={brief.text} label="Vorlesen" />
       </header>
-      <p className="whitespace-pre-line text-[15px] leading-relaxed text-ink">{brief.text}</p>
+      <details className="group">
+        <summary className="hud-label cursor-pointer list-none text-[10px] text-faint transition hover:text-hud">
+          <span className="group-open:hidden">Text anzeigen ▸</span>
+          <span className="hidden group-open:inline">Text ausblenden ▾</span>
+        </summary>
+        <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-ink">{brief.text}</p>
+      </details>
     </article>
   );
 }
@@ -62,6 +69,7 @@ async function Heute() {
   return (
     <>
       <AutoRefresh />
+      <Greeting text={buildGreeting({ now: new Date(), dueCount: due.length, briefs })} />
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="hud-label text-[11px] text-hud-dim">Lunas OS // Tagesstatus</p>

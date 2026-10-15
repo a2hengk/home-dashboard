@@ -92,3 +92,21 @@ export function buildBrief({
 
   return parts.join(" ");
 }
+
+const NAME = "Kevin";
+
+/** Kurze Begrüßung beim Öffnen von Lunas OS: Tageszeit, Name, ein Satz zum Stand */
+export function buildGreeting({ now, dueCount, briefs }: { now: Date; dueCount: number; briefs: { morgen?: unknown; vorarbeit?: unknown } }) {
+  const hour = Number(new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", hour: "numeric", hourCycle: "h23" }).format(now));
+  const hallo =
+    hour < 5 ? `Na ${NAME}, noch wach?` :
+    hour < 11 ? `Guten Morgen, ${NAME}.` :
+    hour < 18 ? `Hey ${NAME}, willkommen zurück.` :
+    `Guten Abend, ${NAME}.`;
+
+  const parts = [hallo];
+  if (briefs.vorarbeit) parts.push("Der Bericht von der Todo-Vorarbeit ist da.");
+  else if (briefs.morgen) parts.push("Dein Morgenbrief liegt bereit.");
+  parts.push(dueCount === 0 ? "Heute ist nichts fällig." : `Heute ${dueCount === 1 ? "ist ein Todo" : `sind ${dueCount} Todos`} fällig.`);
+  return parts.join(" ");
+}

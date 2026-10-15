@@ -50,6 +50,13 @@
       "when": 1791961918347,
       "tag": "0006_todo_steps",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792051711081,
+      "tag": "0007_briefs",
+      "breakpoints": true
     }
   ]
 }

@@ -164,3 +164,16 @@ export const achievements = pgTable(
 
 // Login-Tabellen von Better Auth (generiert mit `npx @better-auth/cli generate`)
 export * from "./auth-schema";
+
+export const briefKind = pgEnum("brief_kind", ["morgen", "vorarbeit"]);
+
+/**
+ * Die Texte aus Claudes geplanten Läufen (Morgenbrief um 7, Todo-Vorarbeit am Nachmittag).
+ * Pro Art genau eine Zeile, jeder Lauf überschreibt sie. Angezeigt wird nur, was von heute ist.
+ */
+export const briefs = pgTable("briefs", {
+  kind: briefKind("kind").primaryKey(),
+  date: date("date", { mode: "string" }).notNull(), // Berliner Datum des Laufs
+  text: text("text").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

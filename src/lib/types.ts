@@ -102,3 +102,9 @@ export type Achievement = {
   date: string; // YYYY-MM-DD
   color?: string; // Fachfarbe bei Schul-Todos
 };
+
+export type BriefKind = "morgen" | "vorarbeit";
+
+/** Text aus einem geplanten Claude-Lauf, nur wenn er von heute ist */
+export type Brief = { text: string; updatedAt: string };
+export type Briefs = Partial<Record<BriefKind, Brief>>;

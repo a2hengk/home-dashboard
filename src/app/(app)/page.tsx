@@ -7,6 +7,8 @@ import { requireUser } from "@/lib/session";
 import { Timeline } from "@/components/timeline";
 import { nextSchoolDay, slotsOn } from "@/lib/timetable";
 import { TodoList, TodoQuickAdd } from "@/components/todos";
+import { ReadAloudButton } from "@/components/speech";
+import { buildBrief } from "@/lib/brief";
 import { Empty, HudPanel, PageSkeleton, Reactor, Readout, SubjectTag } from "@/components/hud";
 
 export default function HeutePage() {
@@ -48,9 +50,12 @@ async function Heute() {
             <span className="block text-[26px] text-hud sm:text-[32px]">{dayMonth(today)}</span>
           </h1>
         </div>
-        <p className="hud-label animate-flicker text-[11px] text-ok">
-          <span aria-hidden>● </span>Alle Systeme online
-        </p>
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <p className="hud-label animate-flicker text-[11px] text-ok">
+            <span aria-hidden>● </span>Alle Systeme online
+          </p>
+          <ReadAloudButton text={buildBrief({ today, todos, events, todaySlots })} />
+        </div>
       </header>
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">

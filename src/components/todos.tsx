@@ -1,11 +1,12 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useOptimistic, useRef, useState, useTransition } from "react";
 import { ChevronDown, ListPlus, Pencil, Plus, X } from "lucide-react";
 import { addTodoStep, createTodo, deleteTodo, deleteTodoStep, setTodoDone, setTodoStepDone, updateTodo } from "@/app/actions";
 import { diffDays, dueLabel } from "@/lib/dates";
 import type { Subject, Todo, TodoArea, TodoStep } from "@/lib/types";
 import { Empty, SubjectTag, buttonClass, fieldClass, fieldInlineClass } from "./hud";
+import { MicButton } from "./speech";
 
 type TodoFields = { title: string; zuordnung: string; due: string; important: boolean };
 
@@ -449,6 +450,8 @@ export function TodoQuickAdd({
   const [important, setImportant] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // Was schon im Feld stand, bevor diktiert wurde. So kann man "lunair:" tippen und den Rest sagen.
+  const before = useRef("");
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -466,7 +469,7 @@ export function TodoQuickAdd({
 
   return (
     <form onSubmit={submit} className="space-y-2">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <label htmlFor="todo-title" className="sr-only">
           Neues Todo
         </label>
@@ -475,8 +478,12 @@ export function TodoQuickAdd({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Neues Todo eingeben, Enter speichert"
-          className={`${fieldClass} flex-1 py-2.5`}
+          className={`${fieldClass} min-w-0 flex-1 basis-40 py-2.5`}
           autoComplete="off"
+        />
+        <MicButton
+          onStart={() => (before.current = title.trim())}
+          onText={(text) => setTitle(before.current ? `${before.current} ${text}` : text)}
         />
         <button type="submit" disabled={!title.trim() || pending} className={buttonClass("primary")}>
           {pending ? "…" : "Speichern"}

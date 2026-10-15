@@ -8,6 +8,7 @@ import { Timeline } from "@/components/timeline";
 import { nextSchoolDay, slotsOn } from "@/lib/timetable";
 import { TodoList, TodoQuickAdd } from "@/components/todos";
 import { ReadAloudButton } from "@/components/speech";
+import { AutoRefresh } from "@/components/auto-refresh";
 import { buildBrief } from "@/lib/brief";
 import type { Brief } from "@/lib/types";
 
@@ -60,6 +61,7 @@ async function Heute() {
 
   return (
     <>
+      <AutoRefresh />
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="hud-label text-[11px] text-hud-dim">Lunas OS // Tagesstatus</p>
@@ -72,7 +74,7 @@ async function Heute() {
           <p className="hud-label animate-flicker text-[11px] text-ok">
             <span aria-hidden>● </span>Alle Systeme online
           </p>
-          <ReadAloudButton text={briefs.morgen?.text ?? buildBrief({ today, todos, events, todaySlots })} />
+          <ReadAloudButton text={(briefs.vorarbeit ?? briefs.morgen)?.text ?? buildBrief({ today, todos, events, todaySlots })} />
         </div>
       </header>
 

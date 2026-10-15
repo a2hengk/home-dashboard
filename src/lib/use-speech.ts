@@ -46,10 +46,22 @@ function useSupported(check: () => boolean) {
 
 /* ---------- Vorlesen ---------- */
 
-/** Deutsche Stimme bevorzugen, lokale vor Online-Stimmen (die laden manchmal nicht) */
+/**
+ * Beste deutsche Stimme: Edge bringt kostenlose neuronale "Natural"-Stimmen mit
+ * (z.b. "Microsoft Katja Online (Natural)"), die klingen deutlich weniger monoton.
+ * Danach lokale Stimmen, die sind zuverlässiger als andere Online-Stimmen.
+ */
 function pickVoice() {
   const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.replace("_", "-").startsWith("de"));
-  return voices.find((v) => v.lang === LANG && v.localService) ?? voices.find((v) => v.lang === LANG) ?? voices[0] ?? null;
+  const de = voices.filter((v) => v.lang.replace("_", "-") === LANG);
+  return (
+    de.find((v) => /natural/i.test(v.name)) ??
+    voices.find((v) => /natural/i.test(v.name)) ??
+    de.find((v) => v.localService) ??
+    de[0] ??
+    voices[0] ??
+    null
+  );
 }
 
 /**

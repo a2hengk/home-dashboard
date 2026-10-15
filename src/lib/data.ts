@@ -4,7 +4,7 @@ import { db } from "@/db";
 import * as t from "@/db/schema";
 import { requireUser } from "./session";
 import { addDays } from "./dates";
-import type { Achievement, Doc, EventItem, Folder, Grade, Slot, Subject, SubjectRef, Todo, TodoStep } from "./types";
+import type { Achievement, Briefs, Doc, EventItem, Folder, Grade, Slot, Subject, SubjectRef, Todo, TodoStep } from "./types";
 
 // Jede Abfrage prüft selbst den Login. Seiten tun das auch, doppelt hält besser,
 // weil Layout und Seite parallel rendern.
@@ -247,12 +247,21 @@ export async function getAchievements(): Promise<Achievement[]> {
 }
 
 /** Alles, was die Startseite braucht, in einem Rutsch */
+/** Claudes Texte von heute. Ältere werden ignoriert, falls ein Lauf ausgefallen ist. */
+export async function getBriefs(today: string): Promise<Briefs> {
+  const rows = await db.select().from(t.briefs).where(eq(t.briefs.date, today));
+  const out: Briefs = {};
+  for (const r of rows) out[r.kind] = { text: r.text.trim(), updatedAt: r.updatedAt.toISOString() };
+  return out;
+}
+
 export async function getToday(today: string) {
   await requireUser();
-  const [todos, events, slots] = await Promise.all([
+  const [todos, events, slots, briefs] = await Promise.all([
     getTodos({ openOnly: true }),
     getEvents({ from: today }),
     getTimetable(),
+    getBriefs(today),
   ]);
-  return { todos, events, slots, horizon: addDays(today, 30) };
+  return { todos, events, slots, briefs, horizon: addDays(today, 30) };
 }

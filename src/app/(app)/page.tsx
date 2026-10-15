@@ -9,6 +9,24 @@ import { nextSchoolDay, slotsOn } from "@/lib/timetable";
 import { TodoList, TodoQuickAdd } from "@/components/todos";
 import { ReadAloudButton } from "@/components/speech";
 import { buildBrief } from "@/lib/brief";
+import type { Brief } from "@/lib/types";
+
+const timeFmt = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" });
+
+/** Ein Text aus einem geplanten Lauf, mit eigenem Vorlese-Button */
+function BriefBlock({ title, brief }: { title: string; brief: Brief }) {
+  return (
+    <article className="min-w-0">
+      <header className="mb-2 flex items-center justify-between gap-3">
+        <h3 className="hud-label text-[11px] text-hud-dim">
+          {title} <span className="text-faint">{"// "}{timeFmt.format(new Date(brief.updatedAt))}</span>
+        </h3>
+        <ReadAloudButton text={brief.text} label="Vorlesen" />
+      </header>
+      <p className="whitespace-pre-line text-[15px] leading-relaxed text-ink">{brief.text}</p>
+    </article>
+  );
+}
 import { Empty, HudPanel, PageSkeleton, Reactor, Readout, SubjectTag } from "@/components/hud";
 
 export default function HeutePage() {
@@ -23,7 +41,7 @@ async function Heute() {
   // Auth-Prüfung hier und nicht nur im Layout: Seite und Layout rendern parallel
   await requireUser();
   const today = todayISO();
-  const [{ todos, events, slots }, subjects] = await Promise.all([getToday(today), getSubjects()]);
+  const [{ todos, events, slots, briefs }, subjects] = await Promise.all([getToday(today), getSubjects()]);
 
   // Schultage mit 2-Wochen-Rhythmus: erst heute, sonst der nächste Tag mit Unterricht
   const todaySlots = slotsOn(slots, today);
@@ -54,11 +72,20 @@ async function Heute() {
           <p className="hud-label animate-flicker text-[11px] text-ok">
             <span aria-hidden>● </span>Alle Systeme online
           </p>
-          <ReadAloudButton text={buildBrief({ today, todos, events, todaySlots })} />
+          <ReadAloudButton text={briefs.morgen?.text ?? buildBrief({ today, todos, events, todaySlots })} />
         </div>
       </header>
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        {briefs.morgen || briefs.vorarbeit ? (
+          <HudPanel label="Briefing // Claude" code="BR" id="briefing" className="lg:col-span-2">
+            <div className="grid gap-6 md:grid-cols-2">
+              {briefs.morgen ? <BriefBlock title="Morgenbrief" brief={briefs.morgen} /> : null}
+              {briefs.vorarbeit ? <BriefBlock title="Todo-Vorarbeit" brief={briefs.vorarbeit} /> : null}
+            </div>
+          </HudPanel>
+        ) : null}
+
         {/* Reaktor: nächste Prüfung */}
         <HudPanel label="Nächste Prüfung" code="EX-01" id="exam" tone={nextExam ? "var(--color-exam)" : undefined}>
           <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">

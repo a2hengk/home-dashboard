@@ -75,6 +75,50 @@ function sentences(text: string) {
     .filter(Boolean);
 }
 
+/** Wartet kurz, bis der Browser seine Stimmen geladen hat (Chrome/Edge liefern sie asynchron) */
+export function voicesReady(timeoutMs = 1500): Promise<void> {
+  const synth = window.speechSynthesis;
+  if (synth.getVoices().length) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      synth.removeEventListener("voiceschanged", done);
+      resolve();
+    };
+    synth.addEventListener("voiceschanged", done);
+    setTimeout(done, timeoutMs);
+  });
+}
+
+/**
+ * Text vorlesen, ohne React. Gibt false zurück, wenn es nichts zu sagen gab.
+ * onError bekommt den Fehlercode, z.b. "not-allowed", wenn der Browser
+ * Sprache ohne vorherigen Klick blockiert.
+ */
+export function speakText(
+  text: string,
+  { onStart, onEnd, onError }: { onStart?: () => void; onEnd?: () => void; onError?: (error: string) => void } = {},
+) {
+  const synth = window.speechSynthesis;
+  synth.cancel();
+  const voice = pickVoice();
+  const parts = sentences(text);
+  if (!parts.length) return false;
+  parts.forEach((part, i) => {
+    const u = new SpeechSynthesisUtterance(part);
+    u.lang = LANG;
+    if (voice) u.voice = voice;
+    u.rate = 1.05;
+    if (i === 0 && onStart) u.onstart = onStart;
+    if (i === parts.length - 1 && onEnd) u.onend = onEnd;
+    u.onerror = (e) => {
+      if (e.error !== "interrupted" && e.error !== "canceled") onError?.(e.error);
+      else if (i === parts.length - 1) onEnd?.();
+    };
+    synth.speak(u);
+  });
+  return true;
+}
+
 export function useSpeak() {
   const supported = useSupported(() => "speechSynthesis" in window);
   const [speaking, setSpeaking] = useState(false);
@@ -98,23 +142,8 @@ export function useSpeak() {
   }, []);
 
   const speak = useCallback((text: string) => {
-    const synth = window.speechSynthesis;
-    synth.cancel();
-    const voice = pickVoice();
-    const parts = sentences(text);
-    if (!parts.length) return;
-    parts.forEach((part, i) => {
-      const u = new SpeechSynthesisUtterance(part);
-      u.lang = LANG;
-      if (voice) u.voice = voice;
-      u.rate = 1.05;
-      if (i === parts.length - 1) {
-        u.onend = () => setSpeaking(false);
-      }
-      u.onerror = () => setSpeaking(false);
-      synth.speak(u);
-    });
-    setSpeaking(true);
+    const started = speakText(text, { onEnd: () => setSpeaking(false), onError: () => setSpeaking(false) });
+    setSpeaking(started);
   }, []);
 
   return { supported, speaking, speak, stop };
